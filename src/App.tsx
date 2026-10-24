@@ -28,7 +28,7 @@ export default function App() {
  const addFiles=(incoming:FileList|File[])=>{
   resetOutput();
   const accepted=Array.from(incoming).filter(file=>{
-   const typeOk=file.type==='application/pdf'||file.type.startsWith('image/');
+   const typeOk=file.type==='application/pdf'||file.type==='image/png'||file.type==='image/jpeg';
    const extOk=/\.(pdf|png|jpe?g|webp)$/i.test(file.name);
    return typeOk&&extOk&&file.size>0;
   });
@@ -90,7 +90,7 @@ export default function App() {
     <div className="work-panel" id="upload-panel">
      <div className="work-panel-heading"><div className="active-tool-icon"><ActiveIcon size={19}/></div><div><h3>{activeToolInfo.label}</h3><p>{activeToolInfo.description}</p></div></div>
      <div className={dragging?'dropzone is-dragging':'dropzone'} role="button" tabIndex={0} onClick={()=>inputRef.current?.click()} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();inputRef.current?.click();}}} onDragOver={event=>{event.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)} onDrop={event=>{event.preventDefault();setDragging(false);addFiles(event.dataTransfer.files);}}>
-      <div className="upload-icon"><FileUp size={24}/></div><p className="drop-title">Drop your files here, or <span>browse</span></p><p className="drop-subtitle">PDF, PNG or JPG/JPEG · up to 50 MB per file</p><input ref={inputRef} hidden type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp" multiple onChange={event=>{if(event.target.files)addFiles(event.target.files);event.target.value='';}}/>
+      <div className="upload-icon"><FileUp size={24}/></div><p className="drop-title">Drop your files here, or <span>browse</span></p><p className="drop-subtitle">PDF, PNG or JPG/JPEG · up to 50 MB per file</p><input ref={inputRef} hidden type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" multiple onChange={event=>{if(event.target.files)addFiles(event.target.files);event.target.value='';}}/>
      </div>
      {files.length>0&&<div className="file-list"><div className="file-list-heading"><span>{files.length} file{files.length===1?'':'s'} added</span><button className="text-button" onClick={clearSession}>Clear all</button></div>{files.map((file,index)=><div className="file-row" key={file.name+file.size+index}><div className="file-type-icon"><FileText size={18}/></div><div className="file-meta"><strong>{file.name}</strong><span>{formatBytes(file.size)}</span></div><button className="icon-button remove-file" aria-label={'Remove '+file.name} onClick={()=>removeFile(index)}><X size={17}/></button></div>)}</div>}
      {activeTool==='rotate'&&<div className="option-row"><label htmlFor="rotation">Rotate pages by</label><select id="rotation" value={rotation} onChange={event=>setRotation(event.target.value)}><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">270° clockwise</option></select></div>}
