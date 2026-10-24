@@ -1,3 +1,26 @@
 import { describe, expect, it } from 'vitest';
-function parsePageRange(input:string,pageCount:number):number[]{const selected=new Set<number>();for(const part of input.split(',').map(value=>value.trim()).filter(Boolean)){const match=/^(\d+)(?:\s*-\s*(\d+))?$/.exec(part);if(!match)throw new Error('Invalid range');const start=Number(match[1]);const end=Number(match[2]??match[1]);if(start<1||end<start||end>pageCount)throw new Error('Invalid range');for(let page=start;page<=end;page++)selected.add(page-1);}return [...selected].sort((a,b)=>a-b);}
-describe('parsePageRange',()=>{it('parses ranges',()=>expect(parsePageRange('1-3, 5, 8',10)).toEqual([0,1,2,4,7]));it('deduplicates overlaps',()=>expect(parsePageRange('1-3, 3-4',5)).toEqual([0,1,2,3]));it('rejects out of range',()=>expect(()=>parsePageRange('1-7',6)).toThrow());it('rejects reversed range',()=>expect(()=>parsePageRange('4-2',5)).toThrow());it('rejects malformed input',()=>expect(()=>parsePageRange('a-3',5)).toThrow());});
+import { parsePageRange } from './utils/pageRange';
+
+describe('parsePageRange', () => {
+  it('parses comma-separated pages and ranges', () => {
+    expect(parsePageRange('1-3, 5, 8', 10)).toEqual([0, 1, 2, 4, 7]);
+  });
+  it('deduplicates overlaps and sorts page indices', () => {
+    expect(parsePageRange('3-4, 1-3', 5)).toEqual([0, 1, 2, 3]);
+  });
+  it('rejects page numbers outside the document', () => {
+    expect(() => parsePageRange('1-7', 6)).toThrow();
+  });
+  it('rejects reversed ranges', () => {
+    expect(() => parsePageRange('4-2', 5)).toThrow();
+  });
+  it('rejects malformed values', () => {
+    expect(() => parsePageRange('a-3', 5)).toThrow();
+  });
+  it('rejects empty input', () => {
+    expect(() => parsePageRange(' , ', 5)).toThrow();
+  });
+  it('rejects invalid page counts', () => {
+    expect(() => parsePageRange('1', 0)).toThrow();
+  });
+});
