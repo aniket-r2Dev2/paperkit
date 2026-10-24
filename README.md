@@ -2,30 +2,42 @@
 
 A minimalist, open-source PDF workspace inspired by the breadth of modern online PDF utilities.
 
-**Product principles**
-- No login, accounts, or user tracking requirement.
-- Minimalist, accessible interface using LinkedIn-inspired blue and white accents, without LinkedIn branding.
-- Upload → process → download. No persistent document storage.
-- Process files in memory or in an isolated temporary workspace; delete temporary files automatically after completion, failure, or a short timeout.
-- Build tools incrementally, with explicit limits and security checks.
+## Product principles
+- No login, accounts, user profiles, or authentication wall.
+- Minimalist, accessible interface with LinkedIn-inspired blue and white accents, without LinkedIn branding.
+- Upload → process → download.
+- No persistent document storage. The initial tools process entirely in your browser using PDF-Lib; inputs and generated blobs are held in page memory only.
+- Clear all files and revoke output object URLs when the user clears the session.
 
-## Product scope
-See [FEATURES.md](FEATURES.md) and [ROADMAP.md](ROADMAP.md).
+## Current prototype
+- Merge PDFs
+- Rotate all pages in a PDF
+- Extract pages by ranges (for example `1-3, 5`)
+- Convert PNG and JPG/JPEG images to PDF
+- Drag-and-drop upload, file picker, file removal, output download, mobile responsive layout
+- 50 MB per-file limit in this prototype
 
-## Privacy model
-PaperKit must not store uploaded documents in a database, object store, logs, analytics, or backups. Avoid logging filenames and document contents. Temporary disk use is allowed only when required by a processor, in an isolated per-job directory with strict size/time limits and guaranteed cleanup. Do not claim files never leave the device unless the selected operation genuinely runs client-side.
-
-## Proposed stack
-- Frontend: TypeScript + React + Vite
-- UI: lightweight custom components, accessible controls, blue/white visual system
-- PDF preview: PDF.js
-- PDF manipulation: evaluate PDF-lib and/or qpdf / Ghostscript server-side based on tool requirements and licenses
-- API: small stateless processing service for operations that need server-side dependencies
-- Tests: Vitest + Playwright; sample PDFs with clear licensing
-- Deployment: Docker-ready, self-hostable
+This is an initial functional slice, not full Sejda feature parity. The planned catalogue is in [FEATURES.md](FEATURES.md), with phased delivery in [ROADMAP.md](ROADMAP.md).
 
 ## Development
-The application will be built feature-by-feature. The initial milestone focuses on the upload/job/download lifecycle, security, and foundational page operations. See the GitHub issues for the task backlog.
+Requires Node.js 20+.
 
-## License
-MIT for original PaperKit code unless dependency or engine licensing requires otherwise. Each bundled dependency and document-processing binary must be reviewed independently before distribution.
+```bash
+npm install
+npm run dev
+npm test
+npm run build
+```
+
+## Privacy model
+The prototype does not send selected files to a PaperKit server or persist them. Local processing still consumes browser memory and runs in the current page. Users can clear the session to release generated object URLs. More complex future operations must retain this model: choose browser-side processing or explain any unavoidable temporary server processing honestly. Never use a database or object store for document retention. Avoid logging filenames, file contents, extracted text, or passwords.
+
+## Proposed stack
+- TypeScript + React + Vite
+- PDF-Lib for the initial page operations
+- PDF.js for future page previews
+- Vitest + browser automation for tests
+- Self-hostable deployment
+
+## Licensing
+Original PaperKit code is provided under the MIT License. Review each dependency's license and any external processing engine before bundling or distribution.
