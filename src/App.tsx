@@ -24,7 +24,8 @@ export default function App() {
  const [outputUrl,setOutputUrl]=useState('');
  const [outputName,setOutputName]=useState('paperkit-output.pdf');
  const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
- const resetOutput=useCallback(()=>{if(outputUrl)URL.revokeObjectURL(outputUrl);setOutputUrl('');setStatus('idle');setError('');},[outputUrl]);
+ useEffect(() => () => { if (outputUrl) URL.revokeObjectURL(outputUrl); }, [outputUrl]);
+ const resetOutput=useCallback(()=>{setOutputUrl('');setStatus('idle');setError('');},[]);
  const addFiles=(incoming:FileList|File[])=>{
   resetOutput();
   const accepted=Array.from(incoming).filter(file=>{
