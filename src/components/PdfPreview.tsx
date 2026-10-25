@@ -40,7 +40,7 @@ export default function PdfPreview({ file }: Props) {
           label.textContent = 'Page ' + number;
           card.appendChild(label);
           containerRef.current.appendChild(card);
-          await page.render({ canvas, canvasContext: context, viewport }).promise;
+          await page.render({ canvasContext: context, viewport }).promise;
         }
         if (!cancelled) setMessage(pdf.numPages > 6 ? 'Showing the first 6 pages.' : 'Preview of your document.');
         await pdf.destroy();
