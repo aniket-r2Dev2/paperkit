@@ -1,6 +1,8 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowDownToLine, ArrowRight, Check, ChevronDown, FileImage, FileText, Files, FileUp, FileWarning, LockKeyhole, Menu, RotateCw, Scissors, ShieldCheck, Sparkles, Trash2, UploadCloud, X } from 'lucide-react';
 import { PDFDocument, degrees } from 'pdf-lib';
+import PdfPreview from './components/PdfPreview';
+import { parsePageRange } from './utils/pageRange';
 
 type ToolKey = 'merge' | 'rotate' | 'split' | 'images';
 const tools = [
@@ -23,15 +25,16 @@ export default function App() {
  const [outputUrl,setOutputUrl]=useState('');
  const [outputName,setOutputName]=useState('paperkit-output.pdf');
  const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
- const resetOutput=useCallback(()=>{if(outputUrl)URL.revokeObjectURL(outputUrl);setOutputUrl('');setStatus('idle');setError('');},[outputUrl]);
+ useEffect(() => () => { if (outputUrl) URL.revokeObjectURL(outputUrl); }, [outputUrl]);
+ const resetOutput=useCallback(()=>{setOutputUrl('');setStatus('idle');setError('');},[]);
  const addFiles=(incoming:FileList|File[])=>{
   resetOutput();
   const accepted=Array.from(incoming).filter(file=>{
-   const typeOk=file.type==='application/pdf'||file.type.startsWith('image/');
-   const extOk=/\.(pdf|png|jpe?g|webp)$/i.test(file.name);
+   const typeOk=file.type==='application/pdf'||file.type==='image/png'||file.type==='image/jpeg';
+   const extOk=/\.(pdf|png|jpe?g)$/i.test(file.name);
    return typeOk&&extOk&&file.size>0;
   });
-  if(!accepted.length){setError('Choose a valid PDF, PNG, JPG, or WebP file.');setStatus('error');return;}
+  if(!accepted.length){setError('Choose a valid PDF, PNG, or JPG/JPEG file.');setStatus('error');return;}
   if(accepted.some(file=>file.size>50*1024*1024)){setError('Each file must be 50 MB or smaller for this early preview.');setStatus('error');return;}
   setFiles(current=>[...current,...accepted].slice(0,20));setStatus('idle');setError('');
  };
@@ -73,7 +76,7 @@ export default function App() {
    setOutputUrl(URL.createObjectURL(new Blob([outputBytes as BlobPart],{type:'application/pdf'})));setOutputName(name);setStatus('done');
   }catch(e){setError(e instanceof Error?e.message:'We could not process that file. Try another PDF.');setStatus('error');}
  };
- const clearSession=()=>{if(outputUrl)URL.revokeObjectURL(outputUrl);setFiles([]);setOutputUrl('');setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');if(inputRef.current)inputRef.current.value='';};
+ const clearSession=()=>{setFiles([]);setOutputUrl('');setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');if(inputRef.current)inputRef.current.value='';};
  const activeToolInfo=tools.find(tool=>tool.key===activeTool)!;const ActiveIcon=activeToolInfo.icon;
  return <div className="app-shell">
   <header className="topbar">
@@ -89,9 +92,23 @@ export default function App() {
     <div className="work-panel" id="upload-panel">
      <div className="work-panel-heading"><div className="active-tool-icon"><ActiveIcon size={19}/></div><div><h3>{activeToolInfo.label}</h3><p>{activeToolInfo.description}</p></div></div>
      <div className={dragging?'dropzone is-dragging':'dropzone'} role="button" tabIndex={0} onClick={()=>inputRef.current?.click()} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();inputRef.current?.click();}}} onDragOver={event=>{event.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)} onDrop={event=>{event.preventDefault();setDragging(false);addFiles(event.dataTransfer.files);}}>
-      <div className="upload-icon"><FileUp size={24}/></div><p className="drop-title">Drop your files here, or <span>browse</span></p><p className="drop-subtitle">PDF, PNG, JPG or WebP · up to 50 MB per file</p><input ref={inputRef} hidden type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp" multiple onChange={event=>{if(event.target.files)addFiles(event.target.files);event.target.value='';}}/>
+      <div className="upload-icon"><FileUp size={24}/></div><p className="drop-title">Drop your files here, or <span>browse</span></p><p className="drop-subtitle">PDF, PNG or JPG/JPEG · up to 50 MB per file</p><input ref={inputRef} hidden type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" multiple onChange={event=>{if(event.target.files)addFiles(event.target.files);event.target.value='';}}/>
      </div>
-     {files.length>0&&<div className="file-list"><div className="file-list-heading"><span>{files.length} file{files.length===1?'':'s'} added</span><button className="text-button" onClick={clearSession}>Clear all</button></div>{files.map((file,index)=><div className="file-row" key={file.name+file.size+index}><div className="file-type-icon"><FileText size={18}/></div><div className="file-meta"><strong>{file.name}</strong><span>{formatBytes(file.size)}</span></div><button className="icon-button remove-file" aria-label={'Remove '+file.name} onClick={()=>removeFile(index)}><X size={17}/></button></div>)}</div>}
+     {files.length > 0 && (
+      <div className="file-list">
+       <div className="file-list-heading"><span>{files.length} file{files.length === 1 ? '' : 's'} added</span><button className="text-button" onClick={clearSession}>Clear all</button></div>
+       {files.map((file, index) => (
+        <div className="file-row" key={file.name + file.size + index}>
+         <div className="file-type-icon"><FileText size={18}/></div>
+         <div className="file-meta"><strong>{file.name}</strong><span>{formatBytes(file.size)}</span></div>
+         <button className="icon-button remove-file" aria-label={'Remove ' + file.name} onClick={() => removeFile(index)}><X size={17}/></button>
+        </div>
+       ))}
+      </div>
+     )}
+     {activeTool !== 'images' && files.some(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) && (
+      <PdfPreview file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} />
+     )}
      {activeTool==='rotate'&&<div className="option-row"><label htmlFor="rotation">Rotate pages by</label><select id="rotation" value={rotation} onChange={event=>setRotation(event.target.value)}><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">270° clockwise</option></select></div>}
      {activeTool==='split'&&<div className="option-row"><label htmlFor="page-range">Pages to extract</label><input id="page-range" value={pageRange} onChange={event=>setPageRange(event.target.value)} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Page numbers start at 1.</span></div>}
      {activeTool==='images'&&<p className="inline-help"><FileImage size={15}/> Each image becomes one page; currently PNG and JPG/JPEG.</p>}
@@ -107,5 +124,4 @@ export default function App() {
   <footer className="footer"><a className="brand footer-brand" href="#"><span className="brand-mark"><FileText size={17}/></span><span>paperkit</span></a><p>Made for simple, private PDF work.</p><div><a href="https://github.com/aniket-r2Dev2/paperkit" target="_blank" rel="noreferrer">GitHub</a><span className="footer-dot">·</span><span>Open source</span></div></footer>
  </div>;
 }
-function parsePageRange(input:string,pageCount:number):number[]{const selected=new Set<number>();for(const part of input.split(',').map(value=>value.trim()).filter(Boolean)){const match=/^(\d+)(?:\s*-\s*(\d+))?$/.exec(part);if(!match)throw new Error('Use page numbers or ranges like 1-3, 5.');const start=Number(match[1]);const end=Number(match[2]??match[1]);if(start<1||end<start||end>pageCount)throw new Error('Invalid page range: '+part);for(let page=start;page<=end;page++)selected.add(page-1);}return [...selected].sort((a,b)=>a-b);}
 function formatBytes(bytes:number):string{return bytes<1024*1024?(bytes/1024).toFixed(0)+' KB':(bytes/(1024*1024)).toFixed(1)+' MB';}
