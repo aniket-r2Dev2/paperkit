@@ -94,7 +94,21 @@ export default function App() {
      <div className={dragging?'dropzone is-dragging':'dropzone'} role="button" tabIndex={0} onClick={()=>inputRef.current?.click()} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();inputRef.current?.click();}}} onDragOver={event=>{event.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)} onDrop={event=>{event.preventDefault();setDragging(false);addFiles(event.dataTransfer.files);}}>
       <div className="upload-icon"><FileUp size={24}/></div><p className="drop-title">Drop your files here, or <span>browse</span></p><p className="drop-subtitle">PDF, PNG or JPG/JPEG · up to 50 MB per file</p><input ref={inputRef} hidden type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" multiple onChange={event=>{if(event.target.files)addFiles(event.target.files);event.target.value='';}}/>
      </div>
-     {files.length>0&&<div className="file-list"><div className="file-list-heading"><span>{files.length} file{files.length===1?'':'s'} added</span><button className="text-button" onClick={clearSession}>Clear all</button></div>{files.map((file,index)=><div className="file-row" key={file.name+file.size+index}><div className="file-type-icon"><FileText size={18}/></div><div className="file-meta"><strong>{file.name}</strong><span>{formatBytes(file.size)}</span></div><button className="icon-button remove-file" aria-label={'Remove '+file.name} onClick={()=>removeFile(index)}><X size={17}/></button></div></div>}{activeTool!=='images'&&files.find(file=>file.type==='application/pdf'||/\.pdf$/i.test(file.name))&&<PdfPreview file={files.find(file=>file.type==='application/pdf'||/\.pdf$/i.test(file.name))!}/ >}
+     {files.length > 0 && (
+      <div className="file-list">
+       <div className="file-list-heading"><span>{files.length} file{files.length === 1 ? '' : 's'} added</span><button className="text-button" onClick={clearSession}>Clear all</button></div>
+       {files.map((file, index) => (
+        <div className="file-row" key={file.name + file.size + index}>
+         <div className="file-type-icon"><FileText size={18}/></div>
+         <div className="file-meta"><strong>{file.name}</strong><span>{formatBytes(file.size)}</span></div>
+         <button className="icon-button remove-file" aria-label={'Remove ' + file.name} onClick={() => removeFile(index)}><X size={17}/></button>
+        </div>
+       ))}
+      </div>
+     )}
+     {activeTool !== 'images' && files.some(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) && (
+      <PdfPreview file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} />
+     )}
      {activeTool==='rotate'&&<div className="option-row"><label htmlFor="rotation">Rotate pages by</label><select id="rotation" value={rotation} onChange={event=>setRotation(event.target.value)}><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">270° clockwise</option></select></div>}
      {activeTool==='split'&&<div className="option-row"><label htmlFor="page-range">Pages to extract</label><input id="page-range" value={pageRange} onChange={event=>setPageRange(event.target.value)} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Page numbers start at 1.</span></div>}
      {activeTool==='images'&&<p className="inline-help"><FileImage size={15}/> Each image becomes one page; currently PNG and JPG/JPEG.</p>}
