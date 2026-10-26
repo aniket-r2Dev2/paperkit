@@ -1,0 +1,38 @@
+name: Dependency Security Audit
+
+on:
+  push:
+    branches: [chore/dependency-security-audit]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies and generate lockfile
+        run: npm install
+      - name: Run npm audit
+        shell: bash
+        run: |
+          npm audit --json > npm-audit-report.json || audit_exit=$?
+          echo "${audit_exit:-0}" > npm-audit-exit-code.txt
+          node -e "const r=require('./npm-audit-report.json'); console.log(JSON.stringify({metadata:r.metadata?.vulnerabilities, advisories:Object.entries(r.vulnerabilities||{}).map(([name,v])=>({name,severity:v.severity,isDirect:v.isDirect,range:v.range,fixAvailable:v.fixAvailable,via:v.via.map(x=>typeof x==='string'?x:{name:x.name,title:x.title,url:x.url,range:x.range})}))},null,2))"
+      - name: Upload audit report and generated lockfile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-security-audit
+          path: |
+            npm-audit-report.json
+            npm-audit-exit-code.txt
+            package-lock.json
+          if-no-files-found: warn
+          retention-days: 14
