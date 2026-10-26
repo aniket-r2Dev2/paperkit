@@ -4,11 +4,12 @@ import { PDFDocument, degrees } from 'pdf-lib';
 import PdfPreview from './components/PdfPreview';
 import { parsePageRange } from './utils/pageRange';
 
-type ToolKey = 'merge' | 'rotate' | 'split' | 'images';
+type ToolKey = 'merge' | 'rotate' | 'split' | 'delete' | 'images';
 const tools = [
  {key:'merge' as const,label:'Merge PDF',description:'Combine files into one polished PDF.',icon:Files,tag:'Popular'},
  {key:'rotate' as const,label:'Rotate pages',description:'Turn pages the right way up.',icon:RotateCw},
  {key:'split' as const,label:'Extract pages',description:'Save selected pages as a new file.',icon:Scissors},
+ {key:'delete' as const,label:'Delete pages',description:'Remove selected pages from a PDF.',icon:Trash2},
  {key:'images' as const,label:'Images to PDF',description:'Turn JPG or PNG images into a PDF.',icon:FileImage}
 ];
 type Status = 'idle'|'processing'|'done'|'error';
@@ -66,11 +67,17 @@ export default function App() {
      pdf.getPages().forEach(page=>page.setRotation(degrees((page.getRotation().angle+turn)%360)));
      outputBytes=await pdf.save();name='paperkit-rotated.pdf';
     }else{
-     if(pdfFiles.length!==1)throw new Error('Extract pages from one PDF at a time for now.');
+     if(pdfFiles.length!==1)throw new Error(activeTool==='delete'?'Delete pages from one PDF at a time for now.':'Extract pages from one PDF at a time for now.');
      const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());const indices=parsePageRange(pageRange,source.getPageCount());
      if(!indices.length)throw new Error('Enter valid page numbers or ranges, e.g. 1-3, 5.');
-     const extracted=await PDFDocument.create();const pages=await extracted.copyPages(source,indices);pages.forEach(page=>extracted.addPage(page));
-     outputBytes=await extracted.save();name='paperkit-pages.pdf';
+     if(activeTool==='delete'){
+      if(indices.length>=source.getPageCount())throw new Error('Keep at least one page in the PDF. Choose fewer pages to delete.');
+      [...indices].sort((a,b)=>b-a).forEach(index=>source.removePage(index));
+      outputBytes=await source.save();name='paperkit-pages-removed.pdf';
+     }else{
+      const extracted=await PDFDocument.create();const pages=await extracted.copyPages(source,indices);pages.forEach(page=>extracted.addPage(page));
+      outputBytes=await extracted.save();name='paperkit-pages.pdf';
+     }
     }
    }
    setOutputUrl(URL.createObjectURL(new Blob([outputBytes as BlobPart],{type:'application/pdf'})));setOutputName(name);setStatus('done');
@@ -110,7 +117,7 @@ export default function App() {
       <PdfPreview file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} />
      )}
      {activeTool==='rotate'&&<div className="option-row"><label htmlFor="rotation">Rotate pages by</label><select id="rotation" value={rotation} onChange={event=>setRotation(event.target.value)}><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">270° clockwise</option></select></div>}
-     {activeTool==='split'&&<div className="option-row"><label htmlFor="page-range">Pages to extract</label><input id="page-range" value={pageRange} onChange={event=>setPageRange(event.target.value)} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Page numbers start at 1.</span></div>}
+     {(activeTool==='split'||activeTool==='delete')&&<div className="option-row"><label htmlFor="page-range">{activeTool==='delete'?'Pages to delete':'Pages to extract'}</label><input id="page-range" value={pageRange} onChange={event=>setPageRange(event.target.value)} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Page numbers start at 1.</span></div>}
      {activeTool==='images'&&<p className="inline-help"><FileImage size={15}/> Each image becomes one page; currently PNG and JPG/JPEG.</p>}
      {error&&<div className="alert alert-error" role="alert"><FileWarning size={17}/><span>{error}</span></div>}
      {status==='done'&&outputUrl&&<div className="alert alert-success" role="status"><Check size={18}/><span>Your PDF is ready to download.</span></div>}
