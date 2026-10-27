@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowDownToLine, ArrowRight, Check, ChevronDown, FileImage, FileText, Files, FileUp, FileWarning, LockKeyhole, Menu, RotateCw, Scissors, ShieldCheck, Sparkles, Trash2, UploadCloud, X } from 'lucide-react';
+import { ArrowDownToLine, ArrowRight, ArrowUpDown, Check, ChevronDown, FileImage, FileText, Files, FileUp, FileWarning, LockKeyhole, Menu, RotateCw, Scissors, ShieldCheck, Sparkles, Trash2, UploadCloud, X } from 'lucide-react';
 import { PDFDocument, degrees } from 'pdf-lib';
 import PdfPreview from './components/PdfPreview';
+import PageReorder from './components/PageReorder';
 import { parsePageRange } from './utils/pageRange';
 
-type ToolKey = 'merge' | 'rotate' | 'split' | 'delete' | 'images';
+type ToolKey = 'merge' | 'rotate' | 'split' | 'delete' | 'reorder' | 'images';
 const tools = [
  {key:'merge' as const,label:'Merge PDF',description:'Combine files into one polished PDF.',icon:Files,tag:'Popular'},
  {key:'rotate' as const,label:'Rotate pages',description:'Turn pages the right way up.',icon:RotateCw},
  {key:'split' as const,label:'Extract pages',description:'Save selected pages as a new file.',icon:Scissors},
  {key:'delete' as const,label:'Delete pages',description:'Remove selected pages from a PDF.',icon:Trash2},
+ {key:'reorder' as const,label:'Reorder pages',description:'Drag pages into the order you want.',icon:ArrowUpDown},
  {key:'images' as const,label:'Images to PDF',description:'Turn JPG or PNG images into a PDF.',icon:FileImage}
 ];
 type Status = 'idle'|'processing'|'done'|'error';
@@ -22,6 +24,7 @@ export default function App() {
  const [error,setError]=useState('');
  const [dragging,setDragging]=useState(false);
  const [pageRange,setPageRange]=useState('1');
+ const [pageOrder,setPageOrder]=useState<number[]>([]);
  const [rotation,setRotation]=useState('90');
  const [outputUrl,setOutputUrl]=useState('');
  const [outputName,setOutputName]=useState('paperkit-output.pdf');
@@ -66,6 +69,14 @@ export default function App() {
      const pdf=await PDFDocument.load(await pdfFiles[0].arrayBuffer());const turn=Number(rotation);
      pdf.getPages().forEach(page=>page.setRotation(degrees((page.getRotation().angle+turn)%360)));
      outputBytes=await pdf.save();name='paperkit-rotated.pdf';
+    }else if(activeTool==='reorder'){
+     if(pdfFiles.length!==1)throw new Error('Reorder pages in one PDF at a time for now.');
+     const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());
+     const count=source.getPageCount();
+     const indices=pageOrder.length===count&&new Set(pageOrder).size===count&&pageOrder.every(index=>Number.isInteger(index)&&index>=0&&index<count)?pageOrder:Array.from({length:count},(_,index)=>index);
+     const reordered=await PDFDocument.create();
+     const pages=await reordered.copyPages(source,indices);pages.forEach(page=>reordered.addPage(page));
+     outputBytes=await reordered.save();name='paperkit-reordered.pdf';
     }else{
      if(pdfFiles.length!==1)throw new Error(activeTool==='delete'?'Delete pages from one PDF at a time for now.':'Extract pages from one PDF at a time for now.');
      const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());const indices=parsePageRange(pageRange,source.getPageCount());
