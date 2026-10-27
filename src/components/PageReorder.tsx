@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, GripVertical } from 'lucide-react';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
