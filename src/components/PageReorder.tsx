@@ -42,7 +42,6 @@ export default function PageReorder({ file, order, onOrderChange }: Props) {
         }
         if (!cancelled) {
           setThumbnails(images);
-          onOrderChange(current => current);
           setMessage('Drag a page to a new position, or use the arrow buttons.');
         }
         await pdf.destroy();
