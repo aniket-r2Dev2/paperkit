@@ -1,5 +1,9 @@
 # PaperKit
 
+> **⚠️ LEGAL NOTICE — LAWFUL USE ONLY**
+>
+> **Use PaperKit only for lawful and authorized purposes. Do not use this project to commit, facilitate, or conceal any illegal activity, or to infringe another person's rights. You are solely responsible for how you use this software and for ensuring that your use complies with all applicable laws. To the maximum extent permitted by law, the repository owner and contributors disclaim responsibility and liability for misuse of this project or for consequences arising from its use. This notice does not limit any rights or obligations that cannot legally be excluded.**
+>
 A minimalist, open-source PDF workspace inspired by the breadth of modern online PDF utilities.
 
 ## Product principles
