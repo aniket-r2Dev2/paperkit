@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Download } from '@playwright/test';
 import { PDFDocument } from 'pdf-lib';
 import { readFile } from 'node:fs/promises';
 
@@ -10,7 +10,7 @@ async function makePdf(pageCount: number): Promise<Buffer> {
   return Buffer.from(await pdf.save());
 }
 
-async function expectPdfDownload(download: Awaited<ReturnType<import('@playwright/test').Download['path']>> extends never ? never : import('@playwright/test').Download) {
+async function expectPdfDownload(download: Download) {
   const path = await download.path();
   expect(path).not.toBeNull();
   const bytes = await readFile(path!);
