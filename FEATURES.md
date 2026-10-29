@@ -15,7 +15,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Full keyboard/screen-reader audit
 - [x] CI, unit tests and dependency security audit
 - [ ] Explicit dependency-license checks and lint/format checks
-- [ ] Browser E2E coverage (homepage, merge and split smoke tests being added)
+- [x] Browser E2E smoke coverage for homepage, merge and split flows
 
 ## Merge and organize
 - [x] Merge multiple PDFs into one PDF
