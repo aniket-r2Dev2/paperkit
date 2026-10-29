@@ -5,11 +5,12 @@ import PdfPreview from './components/PdfPreview';
 import PageReorder from './components/PageReorder';
 import { parsePageRange } from './utils/pageRange';
 
-type ToolKey = 'merge' | 'rotate' | 'split' | 'delete' | 'reorder' | 'images';
+type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images';
 const tools = [
  {key:'merge' as const,label:'Merge PDF',description:'Combine files into one polished PDF.',icon:Files,tag:'Popular'},
  {key:'rotate' as const,label:'Rotate pages',description:'Turn pages the right way up.',icon:RotateCw},
- {key:'split' as const,label:'Extract pages',description:'Save selected pages as a new file.',icon:Scissors},
+ {key:'extract' as const,label:'Extract pages',description:'Save selected pages as a new file.',icon:Scissors},
+ {key:'split' as const,label:'Split PDF',description:'Create a separate PDF for every page.',icon:Files},
  {key:'delete' as const,label:'Delete pages',description:'Remove selected pages from a PDF.',icon:Trash2},
  {key:'reorder' as const,label:'Reorder pages',description:'Drag pages into the order you want.',icon:ArrowUpDown},
  {key:'images' as const,label:'Images to PDF',description:'Turn JPG or PNG images into a PDF.',icon:FileImage}
@@ -27,10 +28,11 @@ export default function App() {
  const [pageOrder,setPageOrder]=useState<number[]>([]);
  const [rotation,setRotation]=useState('90');
  const [outputUrl,setOutputUrl]=useState('');
+ const [splitOutputs,setSplitOutputs]=useState<{url:string;name:string}[]>([]);
  const [outputName,setOutputName]=useState('paperkit-output.pdf');
  const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
- useEffect(() => () => { if (outputUrl) URL.revokeObjectURL(outputUrl); }, [outputUrl]);
- const resetOutput=useCallback(()=>{setOutputUrl('');setStatus('idle');setError('');},[]);
+ useEffect(() => () => { if (outputUrl) URL.revokeObjectURL(outputUrl); splitOutputs.forEach(output=>URL.revokeObjectURL(output.url)); }, [outputUrl,splitOutputs]);
+ const resetOutput=useCallback(()=>{setOutputUrl('');setSplitOutputs([]);setStatus('idle');setError('');},[]);
  const addFiles=(incoming:FileList|File[])=>{
   resetOutput();
   const accepted=Array.from(incoming).filter(file=>{
@@ -48,7 +50,21 @@ export default function App() {
   resetOutput();setStatus('processing');setError('');
   try{
    let outputBytes:Uint8Array;let name='paperkit-output.pdf';
-   if(activeTool==='images'){
+   if(activeTool==='split'){
+    const pdfFiles=files.filter(file=>file.type==='application/pdf'||/\\.pdf$/i.test(file.name));
+    if(pdfFiles.length!==1)throw new Error('Split one PDF at a time.');
+    const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());
+    if(source.getPageCount()<2)throw new Error('This PDF needs at least two pages to split.');
+    const baseName=pdfFiles[0].name.replace(/\\.pdf$/i,'').replace(/[^a-z0-9-_]+/gi,'-')||'paperkit';
+    const outputs:{url:string;name:string}[]=[];
+    for(let index=0;index<source.getPageCount();index++){
+     const single=await PDFDocument.create();
+     const pages=await single.copyPages(source,[index]);pages.forEach(page=>single.addPage(page));
+     const bytes=await single.save();const name=baseName+'-page-'+(index+1)+'.pdf';
+     outputs.push({url:URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/pdf'})),name});
+    }
+    setSplitOutputs(outputs);setOutputUrl('');setStatus('done');return;
+   }else if(activeTool==='images'){
     const pdf=await PDFDocument.create();
     for(const file of files){
      const bytes=await file.arrayBuffer();
@@ -94,7 +110,7 @@ export default function App() {
    setOutputUrl(URL.createObjectURL(new Blob([outputBytes as BlobPart],{type:'application/pdf'})));setOutputName(name);setStatus('done');
   }catch(e){setError(e instanceof Error?e.message:'We could not process that file. Try another PDF.');setStatus('error');}
  };
- const clearSession=()=>{setFiles([]);setOutputUrl('');setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');if(inputRef.current)inputRef.current.value='';};
+ const clearSession=()=>{setFiles([]);setOutputUrl('');setSplitOutputs([]);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');if(inputRef.current)inputRef.current.value='';};
  const activeToolInfo=tools.find(tool=>tool.key===activeTool)!;const ActiveIcon=activeToolInfo.icon;
  return <div className="app-shell">
   <header className="topbar">
@@ -128,11 +144,11 @@ export default function App() {
       activeTool==='reorder' ? <PageReorder file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} order={pageOrder} onOrderChange={setPageOrder}/> : <PdfPreview file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} />
      )}
      {activeTool==='rotate'&&<div className="option-row"><label htmlFor="rotation">Rotate pages by</label><select id="rotation" value={rotation} onChange={event=>setRotation(event.target.value)}><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">270° clockwise</option></select></div>}
-     {(activeTool==='split'||activeTool==='delete')&&<div className="option-row"><label htmlFor="page-range">{activeTool==='delete'?'Pages to delete':'Pages to extract'}</label><input id="page-range" value={pageRange} onChange={event=>setPageRange(event.target.value)} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Page numbers start at 1.</span></div>}
+     {(activeTool==='extract'||activeTool==='delete')&&<div className="option-row"><label htmlFor="page-range">{activeTool==='delete'?'Pages to delete':'Pages to extract'}</label><input id="page-range" value={pageRange} onChange={event=>setPageRange(event.target.value)} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Page numbers start at 1.</span></div>}
      {activeTool==='images'&&<p className="inline-help"><FileImage size={15}/> Each image becomes one page; currently PNG and JPG/JPEG.</p>}
      {error&&<div className="alert alert-error" role="alert"><FileWarning size={17}/><span>{error}</span></div>}
-     {status==='done'&&outputUrl&&<div className="alert alert-success" role="status"><Check size={18}/><span>Your PDF is ready to download.</span></div>}
-     <div className="work-actions"><p className="local-badge"><ShieldCheck size={15}/> Processing stays on this device</p>{status==='done'&&outputUrl?<a className="primary-button process-button" href={outputUrl} download={outputName}><ArrowDownToLine size={18}/> Download PDF</a>:<button className="primary-button process-button" onClick={processFiles} disabled={status==='processing'||files.length===0}>{status==='processing'?<span className="spinner"/>:<Sparkles size={17}/>} {status==='processing'?'Working…':'Process PDF'} <ArrowRight size={16}/></button>}</div>
+     {status==='done'&&(outputUrl||splitOutputs.length>0)&&<div className="alert alert-success" role="status"><Check size={18}/><span>{splitOutputs.length>0?`Split complete: ${splitOutputs.length} PDFs are ready to download.`:'Your PDF is ready to download.'}</span></div>}
+     <div className="work-actions"><p className="local-badge"><ShieldCheck size={15}/> Processing stays on this device</p>{status==='done'&&(outputUrl||splitOutputs.length>0)?(splitOutputs.length>0?<div className="split-downloads">{splitOutputs.map(output=><a key={output.name} className="primary-button process-button" href={output.url} download={output.name}><ArrowDownToLine size={18}/> {output.name}</a>)}</div>:<a className="primary-button process-button" href={outputUrl} download={outputName}><ArrowDownToLine size={18}/> Download PDF</a>):<button className="primary-button process-button" onClick={processFiles} disabled={status==='processing'||files.length===0}>{status==='processing'?<span className="spinner"/>:<Sparkles size={17}/>} {status==='processing'?'Working…':'Process PDF'} <ArrowRight size={16}/></button>}</div>
      {status==='done'&&<button className="start-over" onClick={clearSession}>Done? Clear this session <Trash2 size={14}/></button>}
     </div>
    </section>
