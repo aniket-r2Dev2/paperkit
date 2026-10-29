@@ -1,23 +1,26 @@
 # Roadmap
 
-Priorities are provisional and may be reshuffled after validating libraries and deployment costs.
+Priorities are provisional and may be reshuffled after validating libraries and deployment costs. Checkmarks reflect features currently implemented on `main`; partial or unverified acceptance criteria remain unchecked.
 
 ## Milestone 0 — Product and architecture
-- [ ] Lock product requirements: no login, no persistent file storage, upload/process/download
-- [ ] Decide client-side versus server-side processing per tool
-- [ ] Create React/TypeScript app shell and minimalist blue/white design system
-- [ ] Establish linting, formatting, tests, CI, dependency/license checks
-- [ ] Define file limits, job lifecycle, temp directory and cleanup policy
+- [x] Lock product requirements: no login, no persistent file storage, upload/process/download
+- [x] Decide processing model for the current tools: local browser processing
+- [x] Create React/TypeScript app shell and minimalist blue/white design system
+- [x] Establish unit tests, CI and dependency security audit
+- [ ] Add linting, formatting and explicit dependency-license checks
+- [ ] Define and verify file signatures, resource limits and complete cleanup policy
 
 ## Milestone 1 — First usable release (P0)
-- [ ] Upload and validate files; drag/drop and file picker
-- [ ] Stateless job API and safe downloadable output
-- [ ] Automatic cleanup on success/failure/cancel/timeout/restart
-- [ ] PDF preview and page thumbnails
-- [ ] Merge PDFs
-- [ ] Reorder, rotate, delete, extract pages
-- [ ] Split by page ranges
-- [ ] Accessibility, privacy copy, limits and error UX
+- [x] Upload via drag/drop and file picker with basic type/size validation
+- [x] Local browser processing and downloadable output for implemented tools
+- [ ] Verify cleanup on success, failure, cancellation and component teardown with tests
+- [x] PDF preview and page thumbnails (currently capped at the first 6 pages)
+- [x] Merge multiple PDFs
+- [x] Reorder pages, rotate all pages, delete page ranges and extract page ranges
+- [x] Split a PDF into one downloadable PDF per page
+- [ ] Split using custom page ranges and package multiple outputs as a ZIP
+- [ ] Complete accessibility, privacy copy, limits and error UX review
+- [ ] Browser end-to-end coverage for invalid files and all tool workflows
 
 ## Milestone 2 — Common PDF tools (P1)
 - [ ] Crop and resize pages
@@ -25,7 +28,8 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [ ] Compress PDF with quality presets
 - [ ] Fill forms and add signatures
 - [ ] Protect PDF / unlock with supplied password and authorization
-- [ ] Images-to-PDF, PDF-to-images, PDF-to-text
+- [x] Images-to-PDF
+- [ ] PDF-to-images and PDF-to-text
 - [ ] Edit basic metadata and create bookmarks
 
 ## Milestone 3 — Editing, scans and advanced organization (P2)
@@ -44,8 +48,8 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [ ] Internationalization and additional OCR languages
 
 ## Release gates
-- Uploaded content and generated outputs are never persisted beyond the job lifecycle.
-- Tests cover cleanup after success, malformed files, processor errors, cancellation, timeout, and restarts.
-- Resource caps prevent memory, CPU, and disk exhaustion.
-- Errors are human-readable and do not expose server paths or document contents.
+- Uploaded content and generated outputs are never persisted beyond the page/job lifecycle.
+- Tests cover cleanup after success, malformed files, processor errors, cancellation, timeout, and restarts where applicable.
+- Resource caps prevent memory and CPU exhaustion.
+- Errors are human-readable and do not expose document contents.
 - Supported operations and limitations are documented, and licenses of included engines are reviewed.

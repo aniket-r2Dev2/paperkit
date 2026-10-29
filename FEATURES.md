@@ -1,26 +1,34 @@
 # Feature Inventory
 
-This is a broad capability inventory based on the supplied Sejda homepage capture and follow-up requirements. A check mark means planned/inventory item, not implemented.
+This inventory distinguishes capabilities currently implemented on `main` from planned parity work. A check mark means implemented at a basic level, not that every production acceptance criterion has been verified.
 
 ## Core platform and privacy
-- [ ] Minimalist blue/white responsive UI, navigation, searchable tool catalogue
-- [ ] No login/accounts/authentication
-- [ ] Drag-and-drop and file-picker upload
-- [ ] File/type/signature validation, limits, progress/error states
-- [ ] Stateless job processing and download responses
-- [ ] Automatic cleanup of temporary files on every exit path
-- [ ] Privacy-safe logging, rate limits, resource limits, abuse protection
-- [ ] Accessible keyboard and screen-reader experience
-- [ ] Local/dev Docker setup, CI, security/dependency review, tests
+- [x] Minimalist blue/white responsive UI and tool cards
+- [x] No login/accounts/authentication
+- [x] Drag-and-drop and file-picker upload
+- [ ] Searchable tool catalogue
+- [x] Basic file type/extension and per-file size validation
+- [ ] Validate PDF/image signatures and deeply malformed files before processing
+- [x] Local browser processing and downloadable output for implemented tools
+- [ ] Complete cleanup verification for every success/failure/cancel path
+- [ ] Privacy-safe logging, rate limits, resource limits and abuse protection (no server processing today)
+- [ ] Full keyboard/screen-reader audit
+- [x] CI, unit tests and dependency security audit
+- [ ] Explicit dependency-license checks and lint/format checks
+- [x] Browser E2E smoke coverage for homepage, merge and split flows
 
 ## Merge and organize
-- [ ] Merge PDFs and images into one PDF
-- [ ] Visual combine/reorder/organize pages
+- [x] Merge multiple PDFs into one PDF
+- [ ] Merge PDFs and images together in one operation
+- [x] Reorder pages in a PDF
+- [ ] Visual combine/reorder across multiple PDFs in a single page organizer
 - [ ] Alternate & mix pages from multiple PDFs
-- [ ] Rotate pages
-- [ ] Delete selected pages
-- [ ] Extract selected pages
-- [ ] Split by page ranges / every page
+- [x] Rotate all pages in a PDF
+- [ ] Rotate selected pages only
+- [x] Delete selected page ranges
+- [x] Extract selected page ranges
+- [x] Split into a separate PDF per page
+- [ ] Split by custom page ranges / ZIP multiple outputs
 - [ ] Split in half
 - [ ] Split by file size (best-effort with documented constraints)
 - [ ] Split by bookmarks
@@ -29,7 +37,8 @@ This is a broad capability inventory based on the supplied Sejda homepage captur
 - [ ] Rename output based on text (optional batch operation)
 
 ## Edit and sign
-- [ ] PDF page preview and thumbnails
+- [x] PDF page preview and thumbnails (first 6 pages)
+- [ ] Selectable page thumbnails for targeted operations
 - [ ] Add text and image overlays
 - [ ] Annotations, highlights, strike-through, shapes and links
 - [ ] Fill existing AcroForm fields
@@ -61,7 +70,7 @@ This is a broad capability inventory based on the supplied Sejda homepage captur
 - [ ] Extract embedded images
 
 ## Convert to PDF
-- [ ] Images to PDF
+- [x] PNG/JPEG images to PDF
 - [ ] Word to PDF
 - [ ] HTML/web page to PDF (secure renderer and SSRF controls required)
 
