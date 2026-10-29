@@ -3,8 +3,8 @@ export function parsePageRange(input: string, pageCount: number): number[] {
     throw new Error('The PDF must contain at least one page.');
   }
 
-  const parts = input.split(',').map((value) => value.trim()).filter(Boolean);
-  if (parts.length === 0) {
+  const parts = input.split(',').map((value) => value.trim());
+  if (parts.length === 0 || parts.some((part) => part.length === 0)) {
     throw new Error('Enter page numbers or ranges, e.g. 1-3, 5.');
   }
 
@@ -15,7 +15,7 @@ export function parsePageRange(input: string, pageCount: number): number[] {
 
     const start = Number(match[1]);
     const end = Number(match[2] ?? match[1]);
-    if (start < 1 || end < start || end > pageCount) {
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 1 || end < start || end > pageCount) {
       throw new Error('Invalid page range: ' + part);
     }
     for (let page = start; page <= end; page += 1) selected.add(page - 1);
