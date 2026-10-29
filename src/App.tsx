@@ -51,11 +51,11 @@ export default function App() {
   try{
    let outputBytes:Uint8Array;let name='paperkit-output.pdf';
    if(activeTool==='split'){
-    const pdfFiles=files.filter(file=>file.type==='application/pdf'||/\\.pdf$/i.test(file.name));
+    const pdfFiles=files.filter(file=>file.type==='application/pdf'||/\.pdf$/i.test(file.name));
     if(pdfFiles.length!==1)throw new Error('Split one PDF at a time.');
     const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());
     if(source.getPageCount()<2)throw new Error('This PDF needs at least two pages to split.');
-    const baseName=pdfFiles[0].name.replace(/\\.pdf$/i,'').replace(/[^a-z0-9-_]+/gi,'-')||'paperkit';
+    const baseName=pdfFiles[0].name.replace(/\.pdf$/i,'').replace(/[^a-z0-9-_]+/gi,'-')||'paperkit';
     const outputs:{url:string;name:string}[]=[];
     for(let index=0;index<source.getPageCount();index++){
      const single=await PDFDocument.create();
