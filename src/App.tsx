@@ -48,6 +48,10 @@ export default function App() {
   if(!files.length){setError('Add at least one file to get started.');setStatus('error');return;}
   resetOutput();setStatus('processing');setError('');
   try{
+   const isPdf=(file:File)=>file.type==='application/pdf'||/\.pdf$/i.test(file.name);
+   const isImage=(file:File)=>file.type==='image/png'||file.type==='image/jpeg'||/\.(png|jpe?g)$/i.test(file.name);
+   if(activeTool==='images'&&files.some(file=>!isImage(file)))throw new Error('Images to PDF accepts only PNG and JPG/JPEG files. Remove any PDFs and try again.');
+   if(activeTool!=='images'&&files.some(file=>!isPdf(file)))throw new Error('This tool accepts PDF files only. Remove any images and try again.');
    const { PDFDocument, degrees } = await import('pdf-lib');
    let outputBytes:Uint8Array;let name='paperkit-output.pdf';
    if(activeTool==='split'){
