@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowDownToLine, ArrowRight, ArrowUpDown, Check, ChevronDown, FileImage, FileText, Files, FileUp, FileWarning, LockKeyhole, Menu, RotateCw, Scissors, ShieldCheck, Sparkles, Trash2, UploadCloud, X } from 'lucide-react';
-import { PDFDocument, degrees } from 'pdf-lib';
 import PdfPreview from './components/PdfPreview';
 import PageReorder from './components/PageReorder';
 import { parsePageRange } from './utils/pageRange';
@@ -49,6 +48,7 @@ export default function App() {
   if(!files.length){setError('Add at least one file to get started.');setStatus('error');return;}
   resetOutput();setStatus('processing');setError('');
   try{
+   const { PDFDocument, degrees } = await import('pdf-lib');
    let outputBytes:Uint8Array;let name='paperkit-output.pdf';
    if(activeTool==='split'){
     const pdfFiles=files.filter(file=>file.type==='application/pdf'||/\.pdf$/i.test(file.name));
