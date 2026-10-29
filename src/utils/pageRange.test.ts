@@ -20,7 +20,7 @@ describe('parsePageRange', () => {
     expect(() => parsePageRange('1, ', 4)).toThrow(/Enter page numbers or ranges/);
   });
 
-  it.each(['0', '5', '3-2', '-1', '1-6', '1,foo', '1.5', '1e2'])(
+  it.each(['0', '6', '3-2', '-1', '1-7', '1,foo', '1.5', '1e2'])(
     'rejects invalid range %s',
     (input) => {
       expect(() => parsePageRange(input, 5)).toThrow();
