@@ -41,7 +41,7 @@ export default function App() {
   resetOutput();
   const accepted=Array.from(incoming).filter(file=>{
    const typeOk=file.type==='application/pdf'||file.type==='image/png'||file.type==='image/jpeg';
-   const extOk=/\\.(pdf|png|jpe?g)$/i.test(file.name);
+   const extOk=/\.(pdf|png|jpe?g)$/i.test(file.name);
    return typeOk&&extOk&&file.size>0;
   });
   if(!accepted.length){setError('Choose a valid PDF, PNG, or JPG/JPEG file.');setStatus('error');return;}
