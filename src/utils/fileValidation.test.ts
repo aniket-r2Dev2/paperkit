@@ -6,9 +6,18 @@ const pdf = (name = 'document.pdf'): FileDescriptor => ({ name, type: 'applicati
 const png = (name = 'image.png'): FileDescriptor => ({ name, type: 'image/png' });
 const jpg = (name = 'image.jpg'): FileDescriptor => ({ name, type: 'image/jpeg' });
 
-const pdfTools: FileTool[] = ['merge', 'rotate', 'extract', 'split', 'delete', 'reorder'];
+const pdfTools: FileTool[] = ['rotate', 'extract', 'split', 'delete', 'reorder'];
 
 describe('validateFilesForTool', () => {
+  it('allows PDFs mixed with PNG and JPEG in Merge PDF', () => {
+    expect(validateFilesForTool('merge', [pdf(), png(), jpg(), pdf('another.pdf')])).toBeNull();
+    expect(validateFilesForTool('merge', [png(), jpg()])).toBeNull();
+  });
+
+  it('rejects unsupported types in Merge PDF', () => {
+    expect(validateFilesForTool('merge', [pdf(), {name: 'note.txt', type: 'text/plain'}])).toMatch(/PDF, PNG, and JPG/);
+  });
+
   it.each(pdfTools)('accepts PDF files for %s', (tool) => {
     expect(validateFilesForTool(tool, [pdf(), pdf('second.pdf')])).toBeNull();
   });
@@ -27,6 +36,7 @@ describe('validateFilesForTool', () => {
 
   it('recognizes supported extensions when MIME types are missing', () => {
     expect(validateFilesForTool('merge', [{ name: 'scan.PDF', type: '' }])).toBeNull();
+    expect(validateFilesForTool('merge', [{ name: 'photo.PNG', type: '' }])).toBeNull();
     expect(validateFilesForTool('images', [{ name: 'photo.JPEG', type: '' }])).toBeNull();
   });
 });
