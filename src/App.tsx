@@ -5,7 +5,7 @@ import PageReorder from './components/PageReorder';
 import { validateFileSignatures, validateFilesForTool } from './utils/fileValidation';
 import { parsePageRange } from './utils/pageRange';
 import { revokeObjectUrls } from './utils/objectUrl';
-import { assertProcessingActive, createProcessingDeadline, validateIncomingFiles, validateOutputSize, validatePageCount } from './utils/resourceLimits';
+import { assertProcessingActive, createProcessingDeadline, RESOURCE_LIMITS, validateIncomingFiles, validateOutputSize, validatePageCount } from './utils/resourceLimits';
 
 type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images';
 const tools = [
@@ -91,7 +91,7 @@ export default function App() {
      const image=file.type==='image/png'||/\.png$/i.test(file.name)?await pdf.embedPng(bytes):await pdf.embedJpg(bytes);
      const page=pdf.addPage([image.width,image.height]);page.drawImage(image,{x:0,y:0,width:image.width,height:image.height});
     }
-    if(files.length>500)throw new Error('Images to PDF supports up to 500 images per session.');
+    if(files.length>RESOURCE_LIMITS.maxPages)throw new Error('Images to PDF supports up to 500 images per session.');
     outputBytes=await pdf.save();checkActive();name='paperkit-images.pdf';
    }else{
     const pdfFiles=files.filter(file=>file.type==='application/pdf'||/\.pdf$/i.test(file.name));
@@ -151,7 +151,7 @@ export default function App() {
     <div className="work-panel" id="upload-panel">
      <div className="work-panel-heading"><div className="active-tool-icon"><ActiveIcon size={19}/></div><div><h3>{activeToolInfo.label}</h3><p>{activeToolInfo.description}</p></div></div>
      <div className={dragging?'dropzone is-dragging':'dropzone'} role="button" tabIndex={0} onClick={()=>inputRef.current?.click()} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();inputRef.current?.click();}}} onDragOver={event=>{event.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)} onDrop={event=>{event.preventDefault();setDragging(false);addFiles(event.dataTransfer.files);}}>
-      <div className="upload-icon"><FileUp size={24}/></div><p className="drop-title">Drop your files here, or <span>browse</span></p><p className="drop-subtitle">PDF, PNG or JPG/JPEG · up to 50 MB per file</p><input ref={inputRef} hidden type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" multiple onChange={event=>{if(event.target.files)addFiles(event.target.files);event.target.value='';}}/>
+      <div className="upload-icon"><FileUp size={24}/></div><p className="drop-title">Drop your files here, or <span>browse</span></p><p className="drop-subtitle">PDF, PNG or JPG/JPEG · 50 MB per file · 200 MB total · 20 files max</p><input ref={inputRef} hidden type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" multiple onChange={event=>{if(event.target.files)addFiles(event.target.files);event.target.value='';}}/>
      </div>
      {files.length > 0 && (
       <div className="file-list">
