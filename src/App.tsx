@@ -5,6 +5,7 @@ import PageReorder from './components/PageReorder';
 import { validateFileSignatures, validateFilesForTool } from './utils/fileValidation';
 import { parsePageRange } from './utils/pageRange';
 import { revokeObjectUrls } from './utils/objectUrl';
+import { assertProcessingActive, createProcessingDeadline, validateIncomingFiles, validateOutputSize, validatePageCount } from './utils/resourceLimits';
 
 type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images';
 const tools = [
@@ -20,6 +21,7 @@ type Status = 'idle'|'processing'|'done'|'error';
 
 export default function App() {
  const inputRef=useRef<HTMLInputElement>(null);
+ const processingControllerRef=useRef<AbortController|null>(null);
  const [files,setFiles]=useState<File[]>([]);
  const [activeTool,setActiveTool]=useState<ToolKey>('merge');
  const [status,setStatus]=useState<Status>('idle');
@@ -32,8 +34,8 @@ export default function App() {
  const [splitOutputs,setSplitOutputs]=useState<{url:string;name:string}[]>([]);
  const [outputName,setOutputName]=useState('paperkit-output.pdf');
  const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
- useEffect(() => () => { revokeObjectUrls([outputUrl, ...splitOutputs.map(output=>output.url)].filter(Boolean)); }, [outputUrl,splitOutputs]);
- const resetOutput=useCallback(()=>{setOutputUrl('');setSplitOutputs([]);setStatus('idle');setError('');},[]);
+ useEffect(() => () => { processingControllerRef.current?.abort(); revokeObjectUrls([outputUrl, ...splitOutputs.map(output=>output.url)].filter(Boolean)); }, [outputUrl,splitOutputs]);
+ const resetOutput=useCallback(()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setOutputUrl('');setSplitOutputs([]);setStatus('idle');setError('');},[]);
  const addFiles=(incoming:FileList|File[])=>{
   resetOutput();
   const accepted=Array.from(incoming).filter(file=>{
@@ -50,24 +52,34 @@ export default function App() {
   if(!files.length){setError('Add at least one file to get started.');setStatus('error');return;}
   resetOutput();setStatus('processing');setError('');
   const createdObjectUrls: string[] = [];
+  const controller=new AbortController();processingControllerRef.current=controller;
+  const deadline=createProcessingDeadline();
+  const checkActive=()=>assertProcessingActive(controller.signal,deadline);
   try{
+   checkActive();
    const validationError=validateFilesForTool(activeTool,files);
    if(validationError)throw new Error(validationError);
    const signatureError = await validateFileSignatures(files);
+   checkActive();
    if (signatureError) throw new Error(signatureError);
    const { PDFDocument, degrees } = await import('pdf-lib');
    let outputBytes:Uint8Array;let name='paperkit-output.pdf';
    if(activeTool==='split'){
     const pdfFiles=files.filter(file=>file.type==='application/pdf'||/\.pdf$/i.test(file.name));
     if(pdfFiles.length!==1)throw new Error('Split one PDF at a time.');
-    const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());
+    const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());checkActive();
+    const pageLimitError=validatePageCount(source.getPageCount());if(pageLimitError)throw new Error(pageLimitError);
     if(source.getPageCount()<2)throw new Error('This PDF needs at least two pages to split.');
     const baseName=pdfFiles[0].name.replace(/\.pdf$/i,'').replace(/[^a-z0-9-_]+/gi,'-')||'paperkit';
     const outputs:{url:string;name:string}[]=[];
+    let totalOutputBytes=0;
     for(let index=0;index<source.getPageCount();index++){
+     checkActive();
      const single=await PDFDocument.create();
      const pages=await single.copyPages(source,[index]);pages.forEach(page=>single.addPage(page));
-     const bytes=await single.save();const name=baseName+'-page-'+(index+1)+'.pdf';
+     const bytes=await single.save();checkActive();totalOutputBytes+=bytes.byteLength;
+     const outputLimitError=validateOutputSize(totalOutputBytes);if(outputLimitError)throw new Error(outputLimitError);
+     const name=baseName+'-page-'+(index+1)+'.pdf';
      const url=URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/pdf'}));createdObjectUrls.push(url);outputs.push({url,name});
     }
     setSplitOutputs(outputs);setOutputUrl('');setStatus('done');return;
@@ -79,22 +91,25 @@ export default function App() {
      const image=file.type==='image/png'||/\.png$/i.test(file.name)?await pdf.embedPng(bytes):await pdf.embedJpg(bytes);
      const page=pdf.addPage([image.width,image.height]);page.drawImage(image,{x:0,y:0,width:image.width,height:image.height});
     }
-    outputBytes=await pdf.save();name='paperkit-images.pdf';
+    if(files.length>500)throw new Error('Images to PDF supports up to 500 images per session.');
+    outputBytes=await pdf.save();checkActive();name='paperkit-images.pdf';
    }else{
     const pdfFiles=files.filter(file=>file.type==='application/pdf'||/\.pdf$/i.test(file.name));
     if(!pdfFiles.length)throw new Error('This tool needs at least one PDF file.');
     if(activeTool==='merge'){
      const merged=await PDFDocument.create();
-     for(const file of pdfFiles){const source=await PDFDocument.load(await file.arrayBuffer());const pages=await merged.copyPages(source,source.getPageIndices());pages.forEach(page=>merged.addPage(page));}
-     outputBytes=await merged.save();name='paperkit-merged.pdf';
+     let totalPages=0;
+     for(const file of pdfFiles){checkActive();const source=await PDFDocument.load(await file.arrayBuffer());checkActive();const pageLimitError=validatePageCount(source.getPageCount());if(pageLimitError)throw new Error(pageLimitError);totalPages+=source.getPageCount();if(totalPages>500)throw new Error('Merge supports up to 500 pages in total.');const pages=await merged.copyPages(source,source.getPageIndices());pages.forEach(page=>merged.addPage(page));}
+     outputBytes=await merged.save();checkActive();name='paperkit-merged.pdf';
     }else if(activeTool==='rotate'){
      if(pdfFiles.length!==1)throw new Error('Rotate one PDF at a time for now.');
-     const pdf=await PDFDocument.load(await pdfFiles[0].arrayBuffer());const turn=Number(rotation);
+     const pdf=await PDFDocument.load(await pdfFiles[0].arrayBuffer());checkActive();const pageLimitError=validatePageCount(pdf.getPageCount());if(pageLimitError)throw new Error(pageLimitError);const turn=Number(rotation);
      pdf.getPages().forEach(page=>page.setRotation(degrees((page.getRotation().angle+turn)%360)));
      outputBytes=await pdf.save();name='paperkit-rotated.pdf';
     }else if(activeTool==='reorder'){
      if(pdfFiles.length!==1)throw new Error('Reorder pages in one PDF at a time for now.');
-     const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());
+     const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());checkActive();
+     const pageLimitError=validatePageCount(source.getPageCount());if(pageLimitError)throw new Error(pageLimitError);
      const count=source.getPageCount();
      const indices=pageOrder.length===count&&new Set(pageOrder).size===count&&pageOrder.every(index=>Number.isInteger(index)&&index>=0&&index<count)?pageOrder:Array.from({length:count},(_,index)=>index);
      const reordered=await PDFDocument.create();
@@ -102,7 +117,7 @@ export default function App() {
      outputBytes=await reordered.save();name='paperkit-reordered.pdf';
     }else{
      if(pdfFiles.length!==1)throw new Error(activeTool==='delete'?'Delete pages from one PDF at a time for now.':'Extract pages from one PDF at a time for now.');
-     const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());const indices=parsePageRange(pageRange,source.getPageCount());
+     const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());checkActive();const pageLimitError=validatePageCount(source.getPageCount());if(pageLimitError)throw new Error(pageLimitError);const indices=parsePageRange(pageRange,source.getPageCount());
      if(!indices.length)throw new Error('Enter valid page numbers or ranges, e.g. 1-3, 5.');
      if(activeTool==='delete'){
       if(indices.length>=source.getPageCount())throw new Error('Keep at least one page in the PDF. Choose fewer pages to delete.');
@@ -114,10 +129,13 @@ export default function App() {
      }
     }
    }
+   checkActive();const outputLimitError=validateOutputSize(outputBytes.byteLength);if(outputLimitError)throw new Error(outputLimitError);
    const outputObjectUrl=URL.createObjectURL(new Blob([outputBytes as BlobPart],{type:'application/pdf'}));createdObjectUrls.push(outputObjectUrl);setOutputUrl(outputObjectUrl);setOutputName(name);setStatus('done');
-  }catch(e){revokeObjectUrls(createdObjectUrls);setError(e instanceof Error?e.message:'We could not process that file. Try another PDF.');setStatus('error');}
+  }catch(e){revokeObjectUrls(createdObjectUrls);setError(e instanceof DOMException&&e.name==='AbortError'?'Processing was cancelled.':e instanceof Error?e.message:'We could not process that file. Try another PDF.');setStatus('error');
+  }finally{if(processingControllerRef.current===controller)processingControllerRef.current=null;}
  };
- const clearSession=()=>{setFiles([]);setOutputUrl('');setSplitOutputs([]);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');if(inputRef.current)inputRef.current.value='';};
+ const cancelProcessing=()=>{processingControllerRef.current?.abort();};
+ const clearSession=()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setFiles([]);setOutputUrl('');setSplitOutputs([]);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');if(inputRef.current)inputRef.current.value='';};
  const activeToolInfo=tools.find(tool=>tool.key===activeTool)!;const ActiveIcon=activeToolInfo.icon;
  return <div className="app-shell">
   <header className="topbar">
@@ -155,7 +173,7 @@ export default function App() {
      {activeTool==='images'&&<p className="inline-help"><FileImage size={15}/> Each image becomes one page; currently PNG and JPG/JPEG.</p>}
      {error&&<div className="alert alert-error" role="alert"><FileWarning size={17}/><span>{error}</span></div>}
      {status==='done'&&(outputUrl||splitOutputs.length>0)&&<div className="alert alert-success" role="status"><Check size={18}/><span>{splitOutputs.length>0?`Split complete: ${splitOutputs.length} PDFs are ready to download.`:'Your PDF is ready to download.'}</span></div>}
-     <div className="work-actions"><p className="local-badge"><ShieldCheck size={15}/> Processing stays on this device</p>{status==='done'&&(outputUrl||splitOutputs.length>0)?(splitOutputs.length>0?<div className="split-downloads">{splitOutputs.map(output=><a key={output.name} className="primary-button process-button" href={output.url} download={output.name}><ArrowDownToLine size={18}/> {output.name}</a>)}</div>:<a className="primary-button process-button" href={outputUrl} download={outputName}><ArrowDownToLine size={18}/> Download PDF</a>):<button className="primary-button process-button" onClick={processFiles} disabled={status==='processing'||files.length===0}>{status==='processing'?<span className="spinner"/>:<Sparkles size={17}/>} {status==='processing'?'Working…':'Process PDF'} <ArrowRight size={16}/></button>}</div>
+     <div className="work-actions"><p className="local-badge"><ShieldCheck size={15}/> Processing stays on this device</p>{status==='done'&&(outputUrl||splitOutputs.length>0)?(splitOutputs.length>0?<div className="split-downloads">{splitOutputs.map(output=><a key={output.name} className="primary-button process-button" href={output.url} download={output.name}><ArrowDownToLine size={18}/> {output.name}</a>)}</div>:<a className="primary-button process-button" href={outputUrl} download={outputName}><ArrowDownToLine size={18}/> Download PDF</a>):<button className="primary-button process-button" onClick={processFiles} disabled={status==='processing'||files.length===0}>{status==='processing'?<span className="spinner"/>:<Sparkles size={17}/>} {status==='processing'?'Working…':'Process PDF'} <ArrowRight size={16}/></button>}{status==='processing'&&<button className="text-button" onClick={cancelProcessing}>Cancel processing</button>}</div>
      {status==='done'&&<button className="start-over" onClick={clearSession}>Done? Clear this session <Trash2 size={14}/></button>}
     </div>
    </section>
