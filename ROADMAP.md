@@ -8,12 +8,15 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [x] Create React/TypeScript app shell and minimalist blue/white design system
 - [x] Establish unit tests, CI and dependency security audit
 - [ ] Add linting, formatting and explicit dependency-license checks
-- [ ] Define and verify file signatures, resource limits and complete cleanup policy
+- [ ] Define and verify resource limits and complete cleanup policy
+- [x] Check PDF, PNG and JPEG file signatures before processing
 
 ## Milestone 1 — First usable release (P0)
 - [x] Upload via drag/drop and file picker with basic type/size validation
 - [x] Local browser processing and downloadable output for implemented tools
-- [ ] Verify cleanup on success, failure, cancellation and component teardown with tests
+- [x] Revoke generated output URLs on replacement, clear and component teardown
+- [x] Revoke partially generated split outputs when processing fails
+- [ ] Add automated lifecycle tests for success, failure, cancellation and teardown
 - [x] PDF preview and page thumbnails (currently capped at the first 6 pages)
 - [x] Merge multiple PDFs
 - [x] Reorder pages, rotate all pages, delete page ranges and extract page ranges
