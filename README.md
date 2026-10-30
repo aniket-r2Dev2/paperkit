@@ -14,7 +14,7 @@ A minimalist, open-source PDF workspace inspired by the breadth of modern online
 - Clear files and revoke output object URLs when the user clears the session.
 
 ## Current prototype
-- Merge multiple PDFs
+- Merge PDFs, PNGs and JPG/JPEGs in one document, with reorder/remove controls before processing
 - Rotate all pages in a PDF
 - Extract and delete page ranges (example: `1-3, 5`)
 - Reorder pages in a PDF
@@ -29,6 +29,9 @@ A minimalist, open-source PDF workspace inspired by the breadth of modern online
 - Unit tests, dependency security audit and browser smoke tests in CI
 
 This is an initial functional slice, not full Sejda feature parity. Some limitations remain, including deeper structural PDF validation, custom-range splitting, selected-page rotation and full end-to-end coverage. See [FEATURES.md](FEATURES.md) and [ROADMAP.md](ROADMAP.md).
+
+## Merge PDF usage
+Choose **Merge PDF** and add PDF, PNG or JPG/JPEG files in any combination. Files are merged **top to bottom**; use the up/down arrows to change their order or remove a file before processing. Each PDF contributes all its pages, and every supported image adds one page. Images retain their original pixel dimensions as PDF points (no automatic A4 resizing). The combined document is limited to **500 pages**. For safety, each image is limited to **40 megapixels** and **14,400 pixels per side**. Files are signature-checked before processing; unreadable images and PDFs show actionable errors. All processing stays local to your browser.
 
 ## Split PDF usage
 Choose **Split PDF** and pick **Every page** or **Custom page ranges**. In custom mode, each comma-separated item becomes its own PDF: `1-3, 5, 8-10` produces three PDFs containing pages 1–3, 5, and 8–10. Overlapping, reversed and out-of-range segments are rejected. Download an individual PDF or all outputs as a ZIP. The ZIP is created locally in your browser and retains PDF bytes without additional compression.
