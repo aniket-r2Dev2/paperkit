@@ -8,7 +8,8 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [x] Create React/TypeScript app shell and minimalist blue/white design system
 - [x] Establish unit tests, CI and dependency security audit
 - [ ] Add linting, formatting and explicit dependency-license checks
-- [ ] Define and verify resource limits and complete cleanup policy
+- [x] Define client-side file-count, per-file/aggregate size, page-count, output-size and processing-time limits
+- [ ] Verify complete cleanup policy with component-level lifecycle tests
 - [x] Check PDF, PNG and JPEG file signatures before processing
 
 ## Milestone 1 — First usable release (P0)
@@ -16,13 +17,15 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [x] Local browser processing and downloadable output for implemented tools
 - [x] Revoke generated output URLs on replacement, clear and component teardown
 - [x] Revoke partially generated split outputs when processing fails
-- [ ] Add automated lifecycle tests for success, failure, cancellation and teardown
+- [ ] Add component-level lifecycle tests for success, failure, cancellation and teardown
+- [x] Unit-test URL revocation helper for duplicate URLs and empty cleanup
 - [x] PDF preview and page thumbnails (currently capped at the first 6 pages)
 - [x] Merge multiple PDFs
 - [x] Reorder pages, rotate all pages, delete page ranges and extract page ranges
 - [x] Split a PDF into one downloadable PDF per page
 - [ ] Split using custom page ranges and package multiple outputs as a ZIP
-- [ ] Complete accessibility, privacy copy, limits and error UX review
+- [ ] Complete accessibility and error UX review
+- [x] Document local-processing limits, cooperative cancellation and timeout behavior
 - [ ] Browser end-to-end coverage for invalid files and all tool workflows
 
 ## Milestone 2 — Common PDF tools (P1)
