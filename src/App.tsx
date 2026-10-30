@@ -4,6 +4,8 @@ import PdfPreview from './components/PdfPreview';
 import PageReorder from './components/PageReorder';
 import { validateFileSignatures, validateFilesForTool } from './utils/fileValidation';
 import { parsePageRange } from './utils/pageRange';
+import { MAX_SPLIT_OUTPUTS, parseSplitRanges } from './utils/splitRanges';
+import { createPdfZip } from './utils/zip';
 import { revokeObjectUrls } from './utils/objectUrl';
 import { assertProcessingActive, createProcessingDeadline, RESOURCE_LIMITS, validateIncomingFiles, validateOutputSize, validatePageCount } from './utils/resourceLimits';
 
@@ -12,7 +14,7 @@ const tools = [
  {key:'merge' as const,label:'Merge PDF',description:'Combine files into one polished PDF.',icon:Files,tag:'Popular'},
  {key:'rotate' as const,label:'Rotate pages',description:'Turn pages the right way up.',icon:RotateCw},
  {key:'extract' as const,label:'Extract pages',description:'Save selected pages as a new file.',icon:Scissors},
- {key:'split' as const,label:'Split PDF',description:'Create a separate PDF for every page.',icon:Files},
+ {key:'split' as const,label:'Split PDF',description:'Split every page or choose custom ranges.',icon:Files},
  {key:'delete' as const,label:'Delete pages',description:'Remove selected pages from a PDF.',icon:Trash2},
  {key:'reorder' as const,label:'Reorder pages',description:'Drag pages into the order you want.',icon:ArrowUpDown},
  {key:'images' as const,label:'Images to PDF',description:'Turn JPG or PNG images into a PDF.',icon:FileImage}
@@ -28,15 +30,19 @@ export default function App() {
  const [error,setError]=useState('');
  const [dragging,setDragging]=useState(false);
  const [pageRange,setPageRange]=useState('1');
+ const [splitMode,setSplitMode]=useState<'every'|'ranges'>('every');
+ const [splitRangeInput,setSplitRangeInput]=useState('1-3, 5');
  const [pageOrder,setPageOrder]=useState<number[]>([]);
  const [rotation,setRotation]=useState('90');
  const [outputUrl,setOutputUrl]=useState('');
+ const [zipUrl,setZipUrl]=useState('');
+ const [zipName,setZipName]=useState('paperkit-split.zip');
  const [splitOutputs,setSplitOutputs]=useState<{url:string;name:string}[]>([]);
  const [outputName,setOutputName]=useState('paperkit-output.pdf');
  const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
  useEffect(() => () => { processingControllerRef.current?.abort(); }, []);
- useEffect(() => () => { revokeObjectUrls([outputUrl, ...splitOutputs.map(output=>output.url)].filter(Boolean)); }, [outputUrl,splitOutputs]);
- const resetOutput=useCallback(()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setOutputUrl('');setSplitOutputs([]);setStatus('idle');setError('');},[]);
+ useEffect(() => () => { revokeObjectUrls([outputUrl, zipUrl, ...splitOutputs.map(output=>output.url)].filter(Boolean)); }, [outputUrl,zipUrl,splitOutputs]);
+ const resetOutput=useCallback(()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setOutputUrl('');setZipUrl('');setSplitOutputs([]);setStatus('idle');setError('');},[]);
  const addFiles=(incoming:FileList|File[])=>{
   resetOutput();
   const accepted=Array.from(incoming).filter(file=>{
@@ -71,19 +77,45 @@ export default function App() {
     if(pdfFiles.length!==1)throw new Error('Split one PDF at a time.');
     const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());checkActive();
     const pageLimitError=validatePageCount(source.getPageCount());if(pageLimitError)throw new Error(pageLimitError);
-    if(source.getPageCount()<2)throw new Error('This PDF needs at least two pages to split.');
-    const baseName=pdfFiles[0].name.replace(/\.pdf$/i,'').replace(/[^a-z0-9-_]+/gi,'-')||'paperkit';
-    const outputs:{url:string;name:string}[]=[];
-    let totalOutputBytes=0;
-    for(let index=0;index<source.getPageCount();index++){
-     checkActive();
-     const single=await PDFDocument.create();
-     const pages=await single.copyPages(source,[index]);pages.forEach(page=>single.addPage(page));
-     const bytes=await single.save();checkActive();totalOutputBytes+=bytes.byteLength;
-     const outputLimitError=validateOutputSize(totalOutputBytes);if(outputLimitError)throw new Error(outputLimitError);
-     const name=baseName+'-page-'+(index+1)+'.pdf';
-     const url=URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/pdf'}));createdObjectUrls.push(url);outputs.push({url,name});
+    const count=source.getPageCount();
+    if(splitMode==='every'&&count<2)throw new Error('This PDF needs at least two pages to split every page.');
+    if(splitMode==='every'&&count>MAX_SPLIT_OUTPUTS){
+     throw new Error('Splitting every page supports up to '+MAX_SPLIT_OUTPUTS+' outputs. Choose custom ranges for a larger PDF.');
     }
+    const groups=splitMode==='every'
+     ?Array.from({length:count},(_,index)=>({start:index+1,end:index+1,indices:[index]}))
+     :parseSplitRanges(splitRangeInput,count);
+    const baseName=pdfFiles[0].name.replace(/\.pdf$/i,'').replace(/[^a-z0-9-_]+/gi,'-')||'paperkit';
+    const generated:{name:string;bytes:Uint8Array}[]=[];
+    let totalOutputBytes=0;
+    for(const group of groups){
+     checkActive();
+     const part=await PDFDocument.create();
+     const pages=await part.copyPages(source,group.indices);checkActive();
+     pages.forEach(page=>part.addPage(page));
+     const bytes=await part.save();checkActive();
+     totalOutputBytes+=bytes.byteLength;
+     const outputLimitError=validateOutputSize(totalOutputBytes);
+     if(outputLimitError)throw new Error(outputLimitError);
+     const suffix=splitMode==='every'
+      ?'page-'+group.start
+      :'pages-'+group.start+(group.start===group.end?'':'-'+group.end);
+     generated.push({name:baseName+'-'+suffix+'.pdf',bytes});
+    }
+    checkActive();
+    const zipBytes=createPdfZip(generated);checkActive();
+    const archiveName=baseName+'-split.zip';
+    const archiveUrl=URL.createObjectURL(new Blob([zipBytes as BlobPart],{type:'application/zip'}));
+    createdObjectUrls.push(archiveUrl);
+    const outputs:{url:string;name:string}[]=[];
+    for(const result of generated){
+     checkActive();
+     const url=URL.createObjectURL(new Blob([result.bytes as BlobPart],{type:'application/pdf'}));
+     createdObjectUrls.push(url);
+     outputs.push({url,name:result.name});
+    }
+    checkActive();
+    setZipUrl(archiveUrl);setZipName(archiveName);
     setSplitOutputs(outputs);setOutputUrl('');setStatus('done');return;
    }else if(activeTool==='images'){
     if(files.length>RESOURCE_LIMITS.maxPages)throw new Error('Images to PDF supports up to 500 images per session.');
@@ -138,7 +170,7 @@ export default function App() {
   }finally{if(processingControllerRef.current===controller)processingControllerRef.current=null;}
  };
  const cancelProcessing=()=>{processingControllerRef.current?.abort();};
- const clearSession=()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setFiles([]);setOutputUrl('');setSplitOutputs([]);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');if(inputRef.current)inputRef.current.value='';};
+ const clearSession=()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setFiles([]);setOutputUrl('');setZipUrl('');setSplitOutputs([]);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');if(inputRef.current)inputRef.current.value='';};
  const activeToolInfo=tools.find(tool=>tool.key===activeTool)!;const ActiveIcon=activeToolInfo.icon;
  return <div className="app-shell">
   <header className="topbar">
@@ -171,12 +203,14 @@ export default function App() {
      {activeTool !== 'images' && files.some(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) && (
       activeTool==='reorder' ? <PageReorder file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} order={pageOrder} onOrderChange={setPageOrder}/> : <PdfPreview file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} />
      )}
+     {activeTool==='split'&&<div className="option-row"><label htmlFor="split-mode">Split mode</label><select id="split-mode" value={splitMode} onChange={event=>{setSplitMode(event.target.value as 'every'|'ranges');resetOutput();}}><option value="every">Every page into its own PDF</option><option value="ranges">Custom page ranges</option></select><span className="field-help">Up to {MAX_SPLIT_OUTPUTS} output PDFs per operation.</span></div>}
+     {activeTool==='split'&&splitMode==='ranges'&&<div className="option-row"><label htmlFor="split-ranges">Page ranges</label><input id="split-ranges" value={splitRangeInput} onChange={event=>{setSplitRangeInput(event.target.value);resetOutput();}} placeholder="e.g. 1-3, 5, 8-10"/><span className="field-help">Each comma-separated range creates its own PDF. Ranges must not overlap.</span></div>}
      {activeTool==='rotate'&&<div className="option-row"><label htmlFor="rotation">Rotate pages by</label><select id="rotation" value={rotation} onChange={event=>setRotation(event.target.value)}><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">270° clockwise</option></select></div>}
      {(activeTool==='extract'||activeTool==='delete')&&<div className="option-row"><label htmlFor="page-range">{activeTool==='delete'?'Pages to delete':'Pages to extract'}</label><input id="page-range" value={pageRange} onChange={event=>setPageRange(event.target.value)} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Page numbers start at 1.</span></div>}
      {activeTool==='images'&&<p className="inline-help"><FileImage size={15}/> Each image becomes one page; currently PNG and JPG/JPEG.</p>}
      {error&&<div className="alert alert-error" role="alert"><FileWarning size={17}/><span>{error}</span></div>}
      {status==='done'&&(outputUrl||splitOutputs.length>0)&&<div className="alert alert-success" role="status"><Check size={18}/><span>{splitOutputs.length>0?`Split complete: ${splitOutputs.length} PDFs are ready to download.`:'Your PDF is ready to download.'}</span></div>}
-     <div className="work-actions"><p className="local-badge"><ShieldCheck size={15}/> Processing stays on this device</p>{status==='done'&&(outputUrl||splitOutputs.length>0)?(splitOutputs.length>0?<div className="split-downloads">{splitOutputs.map(output=><a key={output.name} className="primary-button process-button" href={output.url} download={output.name}><ArrowDownToLine size={18}/> {output.name}</a>)}</div>:<a className="primary-button process-button" href={outputUrl} download={outputName}><ArrowDownToLine size={18}/> Download PDF</a>):<button className="primary-button process-button" onClick={processFiles} disabled={status==='processing'||files.length===0}>{status==='processing'?<span className="spinner"/>:<Sparkles size={17}/>} {status==='processing'?'Working…':'Process PDF'} <ArrowRight size={16}/></button>}{status==='processing'&&<button className="text-button" onClick={cancelProcessing}>Cancel processing</button>}</div>
+     <div className="work-actions"><p className="local-badge"><ShieldCheck size={15}/> Processing stays on this device</p>{status==='done'&&(outputUrl||splitOutputs.length>0)?(splitOutputs.length>0?<div className="split-downloads">{zipUrl&&<a className="primary-button process-button" href={zipUrl} download={zipName}><ArrowDownToLine size={18}/> Download all as ZIP</a>}{splitOutputs.map(output=><a key={output.name} className="primary-button process-button" href={output.url} download={output.name}><ArrowDownToLine size={18}/> {output.name}</a>)}</div>:<a className="primary-button process-button" href={outputUrl} download={outputName}><ArrowDownToLine size={18}/> Download PDF</a>):<button className="primary-button process-button" onClick={processFiles} disabled={status==='processing'||files.length===0}>{status==='processing'?<span className="spinner"/>:<Sparkles size={17}/>} {status==='processing'?'Working…':'Process PDF'} <ArrowRight size={16}/></button>}{status==='processing'&&<button className="text-button" onClick={cancelProcessing}>Cancel processing</button>}</div>
      {status==='done'&&<button className="start-over" onClick={clearSession}>Done? Clear this session <Trash2 size={14}/></button>}
     </div>
    </section>
