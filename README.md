@@ -22,10 +22,10 @@ A minimalist, open-source PDF workspace inspired by the breadth of modern online
 - Convert PNG/JPEG images to PDF
 - Local PDF preview (up to the first 6 pages)
 - Drag-and-drop upload, file picker, file removal, output download and responsive layout
-- Basic type/extension validation and 50 MB per-file limit
+- Extension/MIME validation plus PDF, PNG and JPEG file-signature checks; 50 MB per-file limit
 - Unit tests, dependency security audit and browser smoke tests in CI
 
-This is an initial functional slice, not full Sejda feature parity. Some limitations remain, including signature validation, custom-range splitting, selected-page rotation and full end-to-end coverage. See [FEATURES.md](FEATURES.md) and [ROADMAP.md](ROADMAP.md).
+This is an initial functional slice, not full Sejda feature parity. Some limitations remain, including deeper structural PDF validation, custom-range splitting, selected-page rotation and full end-to-end coverage. See [FEATURES.md](FEATURES.md) and [ROADMAP.md](ROADMAP.md).
 
 ## Development
 Requires Node.js 20+.

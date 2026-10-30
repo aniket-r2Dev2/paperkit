@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateFilesForTool, type FileTool } from './fileValidation';
+import { validateFileSignatures, validateFilesForTool, type FileTool } from './fileValidation';
 
 type FileDescriptor = { name: string; type: string };
 const pdf = (name = 'document.pdf'): FileDescriptor => ({ name, type: 'application/pdf' });
@@ -28,5 +28,40 @@ describe('validateFilesForTool', () => {
   it('recognizes supported extensions when MIME types are missing', () => {
     expect(validateFilesForTool('merge', [{ name: 'scan.PDF', type: '' }])).toBeNull();
     expect(validateFilesForTool('images', [{ name: 'photo.JPEG', type: '' }])).toBeNull();
+  });
+});
+
+
+describe('validateFileSignatures', () => {
+  const file = (name: string, type: string, bytes: number[]) =>
+    new File([new Uint8Array(bytes)], name, { type });
+
+  it('accepts PDF, PNG and JPEG signatures', async () => {
+    expect(await validateFileSignatures([
+      file('document.pdf', 'application/pdf', [...new TextEncoder().encode('%PDF-1.7')]),
+      file('image.png', 'image/png', [137, 80, 78, 71, 13, 10, 26, 10]),
+      file('image.jpg', 'image/jpeg', [255, 216, 255, 224]),
+    ])).toBeNull();
+  });
+
+  it('rejects a renamed text file pretending to be a PDF', async () => {
+    expect(await validateFileSignatures([
+      file('invoice.pdf', 'application/pdf', [...new TextEncoder().encode('not a PDF')]),
+    ])).toMatch(/content does not match/);
+  });
+
+  it('rejects mismatched PNG and JPEG contents', async () => {
+    expect(await validateFileSignatures([
+      file('image.png', 'image/png', [255, 216, 255, 224]),
+    ])).toMatch(/content does not match/);
+    expect(await validateFileSignatures([
+      file('image.jpg', 'image/jpeg', [137, 80, 78, 71, 13, 10, 26, 10]),
+    ])).toMatch(/content does not match/);
+  });
+
+  it('accepts a PDF header after leading bytes within the header window', async () => {
+    expect(await validateFileSignatures([
+      file('document.pdf', 'application/pdf', [...new TextEncoder().encode('\\n%PDF-1.7')]),
+    ])).toBeNull();
   });
 });
