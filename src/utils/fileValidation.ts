@@ -13,7 +13,11 @@ export function validateFilesForTool(tool: FileTool, files: FileDescriptor[]): s
     return 'Images to PDF accepts only PNG and JPG/JPEG files. Remove any PDFs and try again.';
   }
 
-  if (tool !== 'images' && files.some((file) => !isPdf(file))) {
+  if (tool === 'merge' && files.some((file) => !isPdf(file) && !isImage(file))) {
+    return 'Merge PDF accepts PDF, PNG, and JPG/JPEG files only. Remove unsupported files and try again.';
+  }
+
+  if (tool !== 'images' && tool !== 'merge' && files.some((file) => !isPdf(file))) {
     return 'This tool accepts PDF files only. Remove any images and try again.';
   }
 
