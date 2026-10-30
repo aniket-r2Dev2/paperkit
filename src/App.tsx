@@ -34,18 +34,20 @@ export default function App() {
  const [splitOutputs,setSplitOutputs]=useState<{url:string;name:string}[]>([]);
  const [outputName,setOutputName]=useState('paperkit-output.pdf');
  const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
- useEffect(() => () => { processingControllerRef.current?.abort(); revokeObjectUrls([outputUrl, ...splitOutputs.map(output=>output.url)].filter(Boolean)); }, [outputUrl,splitOutputs]);
+ useEffect(() => () => { processingControllerRef.current?.abort(); }, []);
+ useEffect(() => () => { revokeObjectUrls([outputUrl, ...splitOutputs.map(output=>output.url)].filter(Boolean)); }, [outputUrl,splitOutputs]);
  const resetOutput=useCallback(()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setOutputUrl('');setSplitOutputs([]);setStatus('idle');setError('');},[]);
  const addFiles=(incoming:FileList|File[])=>{
   resetOutput();
   const accepted=Array.from(incoming).filter(file=>{
    const typeOk=file.type==='application/pdf'||file.type==='image/png'||file.type==='image/jpeg';
-   const extOk=/\.(pdf|png|jpe?g)$/i.test(file.name);
+   const extOk=/\\.(pdf|png|jpe?g)$/i.test(file.name);
    return typeOk&&extOk&&file.size>0;
   });
   if(!accepted.length){setError('Choose a valid PDF, PNG, or JPG/JPEG file.');setStatus('error');return;}
-  if(accepted.some(file=>file.size>50*1024*1024)){setError('Each file must be 50 MB or smaller for this early preview.');setStatus('error');return;}
-  setFiles(current=>[...current,...accepted].slice(0,20));setStatus('idle');setError('');
+  const limitError=validateIncomingFiles(files,accepted);
+  if(limitError){setError(limitError);setStatus('error');return;}
+  setFiles(current=>[...current,...accepted]);setStatus('idle');setError('');
  };
  const removeFile=(index:number)=>{resetOutput();setFiles(current=>current.filter((_,i)=>i!==index));};
  const processFiles=async()=>{
@@ -84,14 +86,15 @@ export default function App() {
     }
     setSplitOutputs(outputs);setOutputUrl('');setStatus('done');return;
    }else if(activeTool==='images'){
+    if(files.length>RESOURCE_LIMITS.maxPages)throw new Error('Images to PDF supports up to 500 images per session.');
     const pdf=await PDFDocument.create();
     for(const file of files){
-     const bytes=await file.arrayBuffer();
+     checkActive();
+     const bytes=await file.arrayBuffer();checkActive();
      if(!/\.(png|jpe?g)$/i.test(file.name))throw new Error('Images to PDF currently supports PNG and JPG/JPEG only.');
      const image=file.type==='image/png'||/\.png$/i.test(file.name)?await pdf.embedPng(bytes):await pdf.embedJpg(bytes);
      const page=pdf.addPage([image.width,image.height]);page.drawImage(image,{x:0,y:0,width:image.width,height:image.height});
     }
-    if(files.length>RESOURCE_LIMITS.maxPages)throw new Error('Images to PDF supports up to 500 images per session.');
     outputBytes=await pdf.save();checkActive();name='paperkit-images.pdf';
    }else{
     const pdfFiles=files.filter(file=>file.type==='application/pdf'||/\.pdf$/i.test(file.name));
@@ -105,7 +108,7 @@ export default function App() {
      if(pdfFiles.length!==1)throw new Error('Rotate one PDF at a time for now.');
      const pdf=await PDFDocument.load(await pdfFiles[0].arrayBuffer());checkActive();const pageLimitError=validatePageCount(pdf.getPageCount());if(pageLimitError)throw new Error(pageLimitError);const turn=Number(rotation);
      pdf.getPages().forEach(page=>page.setRotation(degrees((page.getRotation().angle+turn)%360)));
-     outputBytes=await pdf.save();name='paperkit-rotated.pdf';
+     outputBytes=await pdf.save();checkActive();name='paperkit-rotated.pdf';
     }else if(activeTool==='reorder'){
      if(pdfFiles.length!==1)throw new Error('Reorder pages in one PDF at a time for now.');
      const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());checkActive();
@@ -114,7 +117,7 @@ export default function App() {
      const indices=pageOrder.length===count&&new Set(pageOrder).size===count&&pageOrder.every(index=>Number.isInteger(index)&&index>=0&&index<count)?pageOrder:Array.from({length:count},(_,index)=>index);
      const reordered=await PDFDocument.create();
      const pages=await reordered.copyPages(source,indices);pages.forEach(page=>reordered.addPage(page));
-     outputBytes=await reordered.save();name='paperkit-reordered.pdf';
+     outputBytes=await reordered.save();checkActive();name='paperkit-reordered.pdf';
     }else{
      if(pdfFiles.length!==1)throw new Error(activeTool==='delete'?'Delete pages from one PDF at a time for now.':'Extract pages from one PDF at a time for now.');
      const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());checkActive();const pageLimitError=validatePageCount(source.getPageCount());if(pageLimitError)throw new Error(pageLimitError);const indices=parsePageRange(pageRange,source.getPageCount());
@@ -122,10 +125,10 @@ export default function App() {
      if(activeTool==='delete'){
       if(indices.length>=source.getPageCount())throw new Error('Keep at least one page in the PDF. Choose fewer pages to delete.');
       [...indices].sort((a,b)=>b-a).forEach(index=>source.removePage(index));
-      outputBytes=await source.save();name='paperkit-pages-removed.pdf';
+      outputBytes=await source.save();checkActive();name='paperkit-pages-removed.pdf';
      }else{
       const extracted=await PDFDocument.create();const pages=await extracted.copyPages(source,indices);pages.forEach(page=>extracted.addPage(page));
-      outputBytes=await extracted.save();name='paperkit-pages.pdf';
+      outputBytes=await extracted.save();checkActive();name='paperkit-pages.pdf';
      }
     }
    }
