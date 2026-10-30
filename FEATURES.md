@@ -15,7 +15,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Full keyboard/screen-reader audit
 - [x] CI, unit tests and dependency security audit
 - [ ] Explicit dependency-license checks and lint/format checks
-- [x] Browser E2E smoke coverage for homepage, merge and split flows
+- [x] Browser E2E smoke coverage for homepage, merge, split-per-page, custom split ranges and ZIP downloads
 
 ## Merge and organize
 - [x] Merge multiple PDFs into one PDF
@@ -28,7 +28,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [x] Delete selected page ranges
 - [x] Extract selected page ranges
 - [x] Split into a separate PDF per page
-- [ ] Split by custom page ranges / ZIP multiple outputs
+- [x] Split by custom page ranges / ZIP multiple outputs (up to 100 PDFs, 250 MB)
 - [ ] Split in half
 - [ ] Split by file size (best-effort with documented constraints)
 - [ ] Split by bookmarks
