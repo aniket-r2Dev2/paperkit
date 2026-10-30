@@ -4,6 +4,7 @@ import PdfPreview from './components/PdfPreview';
 import PageReorder from './components/PageReorder';
 import { validateFileSignatures, validateFilesForTool } from './utils/fileValidation';
 import { parsePageRange } from './utils/pageRange';
+import { revokeObjectUrls } from './utils/objectUrl';
 
 type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images';
 const tools = [
@@ -31,7 +32,7 @@ export default function App() {
  const [splitOutputs,setSplitOutputs]=useState<{url:string;name:string}[]>([]);
  const [outputName,setOutputName]=useState('paperkit-output.pdf');
  const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
- useEffect(() => () => { if (outputUrl) URL.revokeObjectURL(outputUrl); splitOutputs.forEach(output=>URL.revokeObjectURL(output.url)); }, [outputUrl,splitOutputs]);
+ useEffect(() => () => { revokeObjectUrls([outputUrl, ...splitOutputs.map(output=>output.url)].filter(Boolean)); }, [outputUrl,splitOutputs]);
  const resetOutput=useCallback(()=>{setOutputUrl('');setSplitOutputs([]);setStatus('idle');setError('');},[]);
  const addFiles=(incoming:FileList|File[])=>{
   resetOutput();
@@ -114,7 +115,7 @@ export default function App() {
     }
    }
    const outputObjectUrl=URL.createObjectURL(new Blob([outputBytes as BlobPart],{type:'application/pdf'}));createdObjectUrls.push(outputObjectUrl);setOutputUrl(outputObjectUrl);setOutputName(name);setStatus('done');
-  }catch(e){createdObjectUrls.forEach(url=>URL.revokeObjectURL(url));setError(e instanceof Error?e.message:'We could not process that file. Try another PDF.');setStatus('error');}
+  }catch(e){revokeObjectUrls(createdObjectUrls);setError(e instanceof Error?e.message:'We could not process that file. Try another PDF.');setStatus('error');}
  };
  const clearSession=()=>{setFiles([]);setOutputUrl('');setSplitOutputs([]);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');if(inputRef.current)inputRef.current.value='';};
  const activeToolInfo=tools.find(tool=>tool.key===activeTool)!;const ActiveIcon=activeToolInfo.icon;
