@@ -23,7 +23,7 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [x] Merge multiple PDFs
 - [x] Reorder pages, rotate all pages, delete page ranges and extract page ranges
 - [x] Split a PDF into one downloadable PDF per page
-- [ ] Split using custom page ranges and package multiple outputs as a ZIP
+- [x] Split using custom, non-overlapping page ranges and package multiple outputs as a ZIP (up to 100 outputs and 250 MB per archive)
 - [ ] Complete accessibility and error UX review
 - [x] Document local-processing limits, cooperative cancellation and timeout behavior
 - [ ] Browser end-to-end coverage for invalid files and all tool workflows
@@ -49,7 +49,7 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 ## Milestone 4 — Conversion breadth (P3)
 - [ ] Evaluate Word/Excel/PowerPoint conversion engines, fidelity and licensing
 - [ ] HTML-to-PDF with sandbox and SSRF controls
-- [ ] Batch workflows and multiple-output ZIP downloads
+- [ ] Batch workflows and general-purpose ZIP downloads (split-tool ZIP downloads implemented)
 - [ ] Optional desktop/offline mode
 - [ ] Internationalization and additional OCR languages
 
