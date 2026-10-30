@@ -15,11 +15,11 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Full keyboard/screen-reader audit
 - [x] CI, unit tests and dependency security audit
 - [ ] Explicit dependency-license checks and lint/format checks
-- [x] Browser E2E smoke coverage for homepage, merge, split-per-page, custom split ranges and ZIP downloads
+- [x] Browser E2E smoke coverage for homepage, PDF merge, mixed PDF/image merge, input order/removal, malformed file handling, split-per-page, custom split ranges and ZIP downloads
 
 ## Merge and organize
 - [x] Merge multiple PDFs into one PDF
-- [ ] Merge PDFs and images together in one operation
+- [x] Merge PDFs and images together in one operation (up to 500 total pages)
 - [x] Reorder pages in a PDF
 - [ ] Visual combine/reorder across multiple PDFs in a single page organizer
 - [ ] Alternate & mix pages from multiple PDFs
