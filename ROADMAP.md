@@ -21,6 +21,7 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [x] Unit-test URL revocation helper for duplicate URLs and empty cleanup
 - [x] PDF preview and page thumbnails (currently capped at the first 6 pages)
 - [x] Merge multiple PDFs
+- [x] Merge PDFs, PNGs and JPEGs in upload order with up/down and removal controls
 - [x] Reorder pages, rotate all pages, delete page ranges and extract page ranges
 - [x] Split a PDF into one downloadable PDF per page
 - [x] Split using custom, non-overlapping page ranges and package multiple outputs as a ZIP (up to 100 outputs and 250 MB per archive)
