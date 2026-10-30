@@ -18,16 +18,20 @@ A minimalist, open-source PDF workspace inspired by the breadth of modern online
 - Rotate all pages in a PDF
 - Extract and delete page ranges (example: `1-3, 5`)
 - Reorder pages in a PDF
-- Split a PDF into one downloadable PDF per page
+- Split every page into individual PDFs, or split custom ranges such as `1-3, 5, 8-10` into separate PDFs
+- Download split results individually or as a single local ZIP archive (STORE/no compression, no extra dependency)
 - Convert PNG/JPEG images to PDF
 - Local PDF preview (up to the first 6 pages)
 - Drag-and-drop upload, file picker, file removal, output download and responsive layout
 - Extension/MIME validation plus PDF, PNG and JPEG file-signature checks
-- Configurable client-side resource caps: 20 files, 50 MB per file, 200 MB total input, 500 pages per PDF (500 pages total for merge), and 250 MB generated output
+- Configurable client-side resource caps: 20 files, 50 MB per file, 200 MB total input, 500 pages per PDF (500 pages total for merge), and 250 MB generated output. Splitting is limited to 100 outputs per job, and the ZIP file must also fit within 250 MB.
 - Cooperative cancellation at processing checkpoints and a 2-minute processing deadline; cancellation cannot interrupt a PDF library call already in progress
 - Unit tests, dependency security audit and browser smoke tests in CI
 
 This is an initial functional slice, not full Sejda feature parity. Some limitations remain, including deeper structural PDF validation, custom-range splitting, selected-page rotation and full end-to-end coverage. See [FEATURES.md](FEATURES.md) and [ROADMAP.md](ROADMAP.md).
+
+## Split PDF usage
+Choose **Split PDF** and pick **Every page** or **Custom page ranges**. In custom mode, each comma-separated item becomes its own PDF: `1-3, 5, 8-10` produces three PDFs containing pages 1–3, 5, and 8–10. Overlapping, reversed and out-of-range segments are rejected. Download an individual PDF or all outputs as a ZIP. The ZIP is created locally in your browser and retains PDF bytes without additional compression.
 
 ## Development
 Requires Node.js 20+.
@@ -40,7 +44,7 @@ npm run build
 ```
 
 ## Privacy model
-The prototype does not send selected files to a PaperKit server or persist them. Local processing still consumes browser memory and runs in the current page. To reduce accidental browser exhaustion, the prototype limits sessions to 20 files and 200 MB total input (50 MB per file), caps PDF operations at 500 pages per PDF (and 500 pages total for merge), caps generated output at 250 MB, and applies a 2-minute processing deadline. Cancellation is cooperative between processing steps; an active PDF-Lib operation cannot be forcibly interrupted. Users can clear the session to release generated object URLs. More complex future operations should preserve local processing where practical; clearly disclose any unavoidable temporary server-side processing. Never use a database or object store for document retention. Avoid logging filenames, file contents, extracted text, or passwords.
+The prototype does not send selected files to a PaperKit server or persist them. Local processing still consumes browser memory and runs in the current page. To reduce accidental browser exhaustion, the prototype limits sessions to 20 files and 200 MB total input (50 MB per file), caps PDF operations at 500 pages per PDF (and 500 pages total for merge), caps generated output at 250 MB, and applies a 2-minute processing deadline. Cancellation is cooperative between processing steps; an active PDF-Lib operation cannot be forcibly interrupted. Users can clear the session to release generated PDF and ZIP object URLs. These links are also revoked when an output is replaced or the page is closed. More complex future operations should preserve local processing where practical; clearly disclose any unavoidable temporary server-side processing. Never use a database or object store for document retention. Avoid logging filenames, file contents, extracted text, or passwords.
 
 ## Proposed stack
 - TypeScript + React + Vite
