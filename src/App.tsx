@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowDownToLine, ArrowRight, ArrowUpDown, Check, ChevronDown, FileImage, FileText, Files, FileUp, FileWarning, LockKeyhole, Menu, RotateCw, Scissors, ShieldCheck, Sparkles, Trash2, UploadCloud, X } from 'lucide-react';
 import PdfPreview from './components/PdfPreview';
 import PageReorder from './components/PageReorder';
-import { validateFilesForTool } from './utils/fileValidation';
+import { validateFileSignatures, validateFilesForTool } from './utils/fileValidation';
 import { parsePageRange } from './utils/pageRange';
 
 type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images';
@@ -48,9 +48,12 @@ export default function App() {
  const processFiles=async()=>{
   if(!files.length){setError('Add at least one file to get started.');setStatus('error');return;}
   resetOutput();setStatus('processing');setError('');
+  const createdObjectUrls: string[] = [];
   try{
    const validationError=validateFilesForTool(activeTool,files);
    if(validationError)throw new Error(validationError);
+   const signatureError = await validateFileSignatures(files);
+   if (signatureError) throw new Error(signatureError);
    const { PDFDocument, degrees } = await import('pdf-lib');
    let outputBytes:Uint8Array;let name='paperkit-output.pdf';
    if(activeTool==='split'){
@@ -64,7 +67,7 @@ export default function App() {
      const single=await PDFDocument.create();
      const pages=await single.copyPages(source,[index]);pages.forEach(page=>single.addPage(page));
      const bytes=await single.save();const name=baseName+'-page-'+(index+1)+'.pdf';
-     outputs.push({url:URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/pdf'})),name});
+     const url=URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/pdf'}));createdObjectUrls.push(url);outputs.push({url,name});
     }
     setSplitOutputs(outputs);setOutputUrl('');setStatus('done');return;
    }else if(activeTool==='images'){
@@ -110,8 +113,8 @@ export default function App() {
      }
     }
    }
-   setOutputUrl(URL.createObjectURL(new Blob([outputBytes as BlobPart],{type:'application/pdf'})));setOutputName(name);setStatus('done');
-  }catch(e){setError(e instanceof Error?e.message:'We could not process that file. Try another PDF.');setStatus('error');}
+   const outputObjectUrl=URL.createObjectURL(new Blob([outputBytes as BlobPart],{type:'application/pdf'}));createdObjectUrls.push(outputObjectUrl);setOutputUrl(outputObjectUrl);setOutputName(name);setStatus('done');
+  }catch(e){createdObjectUrls.forEach(url=>URL.revokeObjectURL(url));setError(e instanceof Error?e.message:'We could not process that file. Try another PDF.');setStatus('error');}
  };
  const clearSession=()=>{setFiles([]);setOutputUrl('');setSplitOutputs([]);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');if(inputRef.current)inputRef.current.value='';};
  const activeToolInfo=tools.find(tool=>tool.key===activeTool)!;const ActiveIcon=activeToolInfo.icon;
