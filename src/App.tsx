@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowDownToLine, ArrowRight, ArrowUpDown, Check, ChevronDown, FileImage, FileText, Files, FileUp, FileWarning, LockKeyhole, Menu, RotateCw, Scissors, ShieldCheck, Sparkles, Trash2, UploadCloud, X } from 'lucide-react';
+import { ArrowDown, ArrowDownToLine, ArrowRight, ArrowUp, ArrowUpDown, Check, ChevronDown, FileImage, FileText, Files, FileUp, FileWarning, LockKeyhole, Menu, RotateCw, Scissors, ShieldCheck, Sparkles, Trash2, UploadCloud, X } from 'lucide-react';
 import PdfPreview from './components/PdfPreview';
 import PageReorder from './components/PageReorder';
 import { validateFileSignatures, validateFilesForTool } from './utils/fileValidation';
 import { parsePageRange } from './utils/pageRange';
 import { MAX_SPLIT_OUTPUTS, parseSplitRanges } from './utils/splitRanges';
 import { createPdfZip } from './utils/zip';
+import { mergeFilesInOrder } from './utils/mergePdfFiles';
 import { revokeObjectUrls } from './utils/objectUrl';
 import { assertProcessingActive, createProcessingDeadline, RESOURCE_LIMITS, validateIncomingFiles, validateOutputSize, validatePageCount } from './utils/resourceLimits';
 
 type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images';
 const tools = [
- {key:'merge' as const,label:'Merge PDF',description:'Combine files into one polished PDF.',icon:Files,tag:'Popular'},
+ {key:'merge' as const,label:'Merge PDF',description:'Combine PDFs and images in the order you choose.',icon:Files,tag:'Popular'},
  {key:'rotate' as const,label:'Rotate pages',description:'Turn pages the right way up.',icon:RotateCw},
  {key:'extract' as const,label:'Extract pages',description:'Save selected pages as a new file.',icon:Scissors},
  {key:'split' as const,label:'Split PDF',description:'Split every page or choose custom ranges.',icon:Files},
@@ -45,17 +46,29 @@ export default function App() {
  const resetOutput=useCallback(()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setOutputUrl('');setZipUrl('');setSplitOutputs([]);setStatus('idle');setError('');},[]);
  const addFiles=(incoming:FileList|File[])=>{
   resetOutput();
-  const accepted=Array.from(incoming).filter(file=>{
+  const accepted=Array.from(incoming);
+  if(!accepted.length){setError('Choose a PDF, PNG, or JPG/JPEG file.');setStatus('error');return;}
+  const invalidFile=accepted.some(file=>{
    const typeOk=file.type==='application/pdf'||file.type==='image/png'||file.type==='image/jpeg';
    const extOk=/\.(pdf|png|jpe?g)$/i.test(file.name);
-   return typeOk&&extOk&&file.size>0;
+   return !typeOk||!extOk||file.size<=0;
   });
-  if(!accepted.length){setError('Choose a valid PDF, PNG, or JPG/JPEG file.');setStatus('error');return;}
+  if(invalidFile){setError('Only non-empty PDF, PNG, and JPG/JPEG files are supported. Remove unsupported files and try again.');setStatus('error');return;}
   const limitError=validateIncomingFiles(files,accepted);
   if(limitError){setError(limitError);setStatus('error');return;}
   setFiles(current=>[...current,...accepted]);setStatus('idle');setError('');
  };
  const removeFile=(index:number)=>{resetOutput();setFiles(current=>current.filter((_,i)=>i!==index));};
+ const moveFile=(index:number,direction:-1|1)=>{
+  const target=index+direction;
+  if(target<0||target>=files.length)return;
+  resetOutput();
+  setFiles(current=>{
+   const next=[...current];
+   [next[index],next[target]]=[next[target],next[index]];
+   return next;
+  });
+ };
  const processFiles=async()=>{
   if(!files.length){setError('Add at least one file to get started.');setStatus('error');return;}
   resetOutput();setStatus('processing');setError('');
@@ -130,12 +143,10 @@ export default function App() {
     outputBytes=await pdf.save();checkActive();name='paperkit-images.pdf';
    }else{
     const pdfFiles=files.filter(file=>file.type==='application/pdf'||/\.pdf$/i.test(file.name));
-    if(!pdfFiles.length)throw new Error('This tool needs at least one PDF file.');
+    if(!pdfFiles.length&&activeTool!=='merge')throw new Error('This tool needs at least one PDF file.');
     if(activeTool==='merge'){
-     const merged=await PDFDocument.create();
-     let totalPages=0;
-     for(const file of pdfFiles){checkActive();const source=await PDFDocument.load(await file.arrayBuffer());checkActive();const pageLimitError=validatePageCount(source.getPageCount());if(pageLimitError)throw new Error(pageLimitError);totalPages+=source.getPageCount();if(totalPages>500)throw new Error('Merge supports up to 500 pages in total.');const pages=await merged.copyPages(source,source.getPageIndices());pages.forEach(page=>merged.addPage(page));}
-     outputBytes=await merged.save();checkActive();name='paperkit-merged.pdf';
+     outputBytes=await mergeFilesInOrder(files,PDFDocument,checkActive);
+     name='paperkit-merged.pdf';
     }else if(activeTool==='rotate'){
      if(pdfFiles.length!==1)throw new Error('Rotate one PDF at a time for now.');
      const pdf=await PDFDocument.load(await pdfFiles[0].arrayBuffer());checkActive();const pageLimitError=validatePageCount(pdf.getPageCount());if(pageLimitError)throw new Error(pageLimitError);const turn=Number(rotation);
@@ -191,10 +202,12 @@ export default function App() {
      {files.length > 0 && (
       <div className="file-list">
        <div className="file-list-heading"><span>{files.length} file{files.length === 1 ? '' : 's'} added</span><button className="text-button" onClick={clearSession}>Clear all</button></div>
+       {activeTool==='merge'&&<p className="inline-help">Files merge from top to bottom. Use the arrows to change their order; each image becomes one PDF page.</p>}
        {files.map((file, index) => (
         <div className="file-row" key={file.name + file.size + index}>
-         <div className="file-type-icon"><FileText size={18}/></div>
+         <div className="file-type-icon">{/\.(png|jpe?g)$/i.test(file.name)?<FileImage size={18}/>:<FileText size={18}/>}</div>
          <div className="file-meta"><strong>{file.name}</strong><span>{formatBytes(file.size)}</span></div>
+         {activeTool==='merge'&&<><button className="icon-button" aria-label={'Move file '+(index+1)+' up: '+file.name} disabled={index===0} onClick={()=>moveFile(index,-1)}><ArrowUp size={17}/></button><button className="icon-button" aria-label={'Move file '+(index+1)+' down: '+file.name} disabled={index===files.length-1} onClick={()=>moveFile(index,1)}><ArrowDown size={17}/></button></>}
          <button className="icon-button remove-file" aria-label={'Remove ' + file.name} onClick={() => removeFile(index)}><X size={17}/></button>
         </div>
        ))}
