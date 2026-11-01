@@ -32,7 +32,7 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 ## Milestone 2 — Common PDF tools (P1)
 - [ ] Crop and resize pages
 - [ ] Add watermark, page numbers, header/footer
-- [ ] Compress PDF with quality presets
+- [x] Compress PDF with structural (preserve quality) and raster (balanced/small) presets, with explicit flattening warnings, before/after sizes and no-growth fallback
 - [ ] Fill forms and add signatures
 - [ ] Protect PDF / unlock with supplied password and authorization
 - [x] Images-to-PDF
