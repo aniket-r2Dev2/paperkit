@@ -6,7 +6,7 @@ const pdf = (name = 'document.pdf'): FileDescriptor => ({ name, type: 'applicati
 const png = (name = 'image.png'): FileDescriptor => ({ name, type: 'image/png' });
 const jpg = (name = 'image.jpg'): FileDescriptor => ({ name, type: 'image/jpeg' });
 
-const pdfTools: FileTool[] = ['rotate', 'extract', 'split', 'delete', 'reorder', 'pdf-images'];
+const pdfTools: FileTool[] = ['rotate', 'extract', 'split', 'delete', 'reorder', 'pdf-images', 'compress'];
 
 describe('validateFilesForTool', () => {
   it('allows PDFs mixed with PNG and JPEG in Merge PDF', () => {
@@ -24,6 +24,11 @@ describe('validateFilesForTool', () => {
 
   it.each(pdfTools)('rejects images for %s with a clear message', (tool) => {
     expect(validateFilesForTool(tool, [pdf(), png()])).toMatch(/PDF files only/);
+  });
+
+  it('accepts PDFs and rejects images for compression', () => {
+    expect(validateFilesForTool('compress', [pdf()])).toBeNull();
+    expect(validateFilesForTool('compress', [png()])).toMatch(/PDF files only/);
   });
 
   it('accepts a PDF and rejects images in PDF to Images', () => {
