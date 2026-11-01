@@ -8,6 +8,7 @@ import {
   compressionCanvasSize,
   validateCompressionPageCount,
   validateCompressionPreset,
+  validateCompressionPdfEnvelope,
   type CompressionOutcome,
   type CompressionPreset,
   type RasterCompressionPreset,
@@ -162,6 +163,7 @@ export async function compressPdf(
   const original = new Uint8Array(await file.arrayBuffer());
   checkActive();
   if (!original.byteLength) throw new Error('Choose a non-empty PDF.');
+  validateCompressionPdfEnvelope(original);
 
   const candidate = preset === 'lossless'
     ? await rewriteWithoutRasterization(original, checkActive)
