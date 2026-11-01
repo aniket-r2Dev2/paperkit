@@ -15,7 +15,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Full keyboard/screen-reader audit
 - [x] CI, unit tests and dependency security audit
 - [ ] Explicit dependency-license checks and lint/format checks
-- [x] Browser E2E smoke coverage for homepage, PDF merge, mixed PDF/image merge, input order/removal, malformed file handling, split-per-page, custom split ranges and ZIP downloads
+- [x] Browser E2E smoke coverage for homepage, PDF merge, mixed PDF/image merge, input order/removal, malformed file handling, split-per-page, custom split ranges, PDF-to-images PNG/JPEG export and ZIP downloads
 
 ## Merge and organize
 - [x] Merge multiple PDFs into one PDF
@@ -63,7 +63,8 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 
 ## Convert from PDF
 - [ ] PDF to text
-- [ ] PDF to images (PNG/JPG/TIFF; selected pages and resolution)
+- [x] PDF to images (PNG/JPEG, selected pages, 72–300 DPI, local ZIP)
+- [ ] PDF to images in TIFF format
 - [ ] PDF to Word (DOCX)
 - [ ] PDF to Excel/CSV
 - [ ] PDF to PowerPoint

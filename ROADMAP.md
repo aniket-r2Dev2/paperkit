@@ -36,7 +36,8 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [ ] Fill forms and add signatures
 - [ ] Protect PDF / unlock with supplied password and authorization
 - [x] Images-to-PDF
-- [ ] PDF-to-images and PDF-to-text
+- [x] PDF-to-images (PNG/JPEG, page selection, DPI, ZIP downloads)
+- [ ] PDF-to-text
 - [ ] Edit basic metadata and create bookmarks
 
 ## Milestone 3 — Editing, scans and advanced organization (P2)
