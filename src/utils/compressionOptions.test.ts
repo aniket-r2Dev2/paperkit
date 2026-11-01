@@ -5,9 +5,17 @@ import {
   compressionCanvasSize,
   validateCompressionPageCount,
   validateCompressionPreset,
+  validateCompressionPdfEnvelope,
 } from './compressionOptions';
 
 describe('compression presets', () => {
+  it('rejects a fake PDF header missing a document trailer', () => {
+    const enc = new TextEncoder();
+    expect(() => validateCompressionPdfEnvelope(enc.encode('%PDF-1.7\nthis is not a valid PDF'))).toThrow(/could not be read/);
+    expect(() => validateCompressionPdfEnvelope(enc.encode('not a PDF but this has %%EOF and a lot of words'))).toThrow(/could not be read/);
+    expect(() => validateCompressionPdfEnvelope(enc.encode('%PDF-1.7\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF'))).not.toThrow();
+  });
+
   it('defines three distinct, honest compression strategies', () => {
     expect(COMPRESSION_PRESETS.lossless.dpi).toBeNull();
     expect(COMPRESSION_PRESETS.balanced.dpi).toBeGreaterThan(COMPRESSION_PRESETS.small.dpi!);
