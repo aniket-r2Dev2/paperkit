@@ -21,6 +21,7 @@ A minimalist, open-source PDF workspace inspired by the breadth of modern online
 - Split every page into individual PDFs, or split custom ranges such as `1-3, 5, 8-10` into separate PDFs
 - Download split results individually or as a single local ZIP archive (STORE/no compression, no extra dependency)
 - Convert PNG/JPEG images to PDF
+- Export PDF pages as PNG/JPEG at 72, 150, 200, or 300 DPI; select page ranges and download individually or as ZIP
 - Local PDF preview (up to the first 6 pages)
 - Drag-and-drop upload, file picker, file removal, output download and responsive layout
 - Extension/MIME validation plus PDF, PNG and JPEG file-signature checks
@@ -28,13 +29,18 @@ A minimalist, open-source PDF workspace inspired by the breadth of modern online
 - Cooperative cancellation at processing checkpoints and a 2-minute processing deadline; cancellation cannot interrupt a PDF library call already in progress
 - Unit tests, dependency security audit and browser smoke tests in CI
 
-This is an initial functional slice, not full Sejda feature parity. Some limitations remain, including deeper structural PDF validation, custom-range splitting, selected-page rotation and full end-to-end coverage. See [FEATURES.md](FEATURES.md) and [ROADMAP.md](ROADMAP.md).
+This is an initial functional slice, not full Sejda feature parity. Some limitations remain, including deeper structural PDF validation, selected-page rotation, TIFF export and full end-to-end coverage. See [FEATURES.md](FEATURES.md) and [ROADMAP.md](ROADMAP.md).
 
 ## Merge PDF usage
 Choose **Merge PDF** and add PDF, PNG or JPG/JPEG files in any combination. Files are merged **top to bottom**; use the up/down arrows to change their order or remove a file before processing. Each PDF contributes all its pages, and every supported image adds one page. Images retain their original pixel dimensions as PDF points (no automatic A4 resizing). The combined document is limited to **500 pages**. For safety, each image is limited to **40 megapixels** and **14,400 pixels per side**. Files are signature-checked before processing; unreadable images and PDFs show actionable errors. All processing stays local to your browser.
 
 ## Split PDF usage
 Choose **Split PDF** and pick **Every page** or **Custom page ranges**. In custom mode, each comma-separated item becomes its own PDF: `1-3, 5, 8-10` produces three PDFs containing pages 1–3, 5, and 8–10. Overlapping, reversed and out-of-range segments are rejected. Download an individual PDF or all outputs as a ZIP. The ZIP is created locally in your browser and retains PDF bytes without additional compression.
+
+## PDF to Images usage
+Choose **PDF to Images**, upload **one PDF**, select **PNG** (lossless) or **JPEG** (quality 90%), and set the resolution to **72, 150, 200, or 300 DPI**. Export all pages or specify page numbers/ranges such as `1-3, 5`. A single selected page downloads directly; multiple pages can be downloaded individually or together as a local ZIP archive. Outputs are ordered by page number; repeated page references are deduplicated.
+
+Limits: up to **100 exported pages**, a **250 MB** combined image/ZIP output cap, **16 megapixels** and **8192 pixels per side** per rendered page. Use lower DPI or a smaller page range if a limit is reached. Password-protected PDFs are not currently supported. TIFF export and configurable JPEG quality are future enhancements. Rendering happens locally using PDF.js and browser canvas; no file uploads or document persistence. Generated object URLs are revoked on output replacement, clear, and teardown. PDF.js renders may be canceled between or during page operations.
 
 ## Development
 Requires Node.js 20+.
