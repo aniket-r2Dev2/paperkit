@@ -1,6 +1,18 @@
 import { RESOURCE_LIMITS, validatePageCount } from './resourceLimits';
 
 export type CompressionPreset = 'lossless' | 'balanced' | 'small';
+
+/** Compression requires a complete file, not merely a forged %PDF header.
+ * The standard EOF marker must appear near the end; PDF-Lib/PDF.js still
+ * perform the full object-structure parse after this inexpensive preflight. */
+export function validateCompressionPdfEnvelope(bytes: Uint8Array): void {
+  const decoder = new TextDecoder();
+  if (bytes.byteLength < 32 ||
+      !decoder.decode(bytes.subarray(0, Math.min(1024, bytes.byteLength))).includes('%PDF-') ||
+      !decoder.decode(bytes.subarray(Math.max(0, bytes.byteLength - 4096))).includes('%%EOF')) {
+    throw new Error('This PDF could not be read. Try an unencrypted, valid PDF.');
+  }
+}
 export type RasterCompressionPreset = Exclude<CompressionPreset, 'lossless'>;
 
 export const COMPRESSION_PRESETS = {
