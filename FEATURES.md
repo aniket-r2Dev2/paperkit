@@ -15,7 +15,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Full keyboard/screen-reader audit
 - [x] CI, unit tests and dependency security audit
 - [ ] Explicit dependency-license checks and lint/format checks
-- [x] Browser E2E smoke coverage for homepage, PDF merge, mixed PDF/image merge, input order/removal, malformed file handling, split-per-page, custom split ranges, PDF-to-images PNG/JPEG export and ZIP downloads
+- [x] Browser E2E smoke coverage for homepage, PDF merge, mixed PDF/image merge, input order/removal, malformed file handling, split-per-page, custom split ranges, PDF-to-images PNG/JPEG export, compression presets, and ZIP downloads
 
 ## Merge and organize
 - [x] Merge multiple PDFs into one PDF
@@ -52,7 +52,8 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Flatten form fields/annotations
 
 ## Compress, scan and security
-- [ ] Compression presets and image-quality/resolution controls
+- [x] Compression presets: preserve quality, balanced (144 DPI/JPEG 76%), small file (96 DPI/JPEG 55%), plus before/after size and honest no-growth fallback
+- [ ] Preserve searchable text, form fields and links while compressing embedded images (raster presets flatten pages)
 - [ ] Deskew scanned PDF pages
 - [ ] OCR scanned documents to searchable PDF/text
 - [ ] Protect/encrypt PDF with password
