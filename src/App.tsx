@@ -5,12 +5,13 @@ import PageReorder from './components/PageReorder';
 import { validateFileSignatures, validateFilesForTool } from './utils/fileValidation';
 import { parsePageRange } from './utils/pageRange';
 import { MAX_SPLIT_OUTPUTS, parseSplitRanges } from './utils/splitRanges';
-import { createPdfZip } from './utils/zip';
+import { createPdfZip, createImageZip } from './utils/zip';
+import { type ImageFormat, type Resolution } from './utils/imageExportOptions';
 import { mergeFilesInOrder } from './utils/mergePdfFiles';
 import { revokeObjectUrls } from './utils/objectUrl';
 import { assertProcessingActive, createProcessingDeadline, RESOURCE_LIMITS, validateIncomingFiles, validateOutputSize, validatePageCount } from './utils/resourceLimits';
 
-type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images';
+type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images';
 const tools = [
  {key:'merge' as const,label:'Merge PDF',description:'Combine PDFs and images in the order you choose.',icon:Files,tag:'Popular'},
  {key:'rotate' as const,label:'Rotate pages',description:'Turn pages the right way up.',icon:RotateCw},
@@ -18,7 +19,8 @@ const tools = [
  {key:'split' as const,label:'Split PDF',description:'Split every page or choose custom ranges.',icon:Files},
  {key:'delete' as const,label:'Delete pages',description:'Remove selected pages from a PDF.',icon:Trash2},
  {key:'reorder' as const,label:'Reorder pages',description:'Drag pages into the order you want.',icon:ArrowUpDown},
- {key:'images' as const,label:'Images to PDF',description:'Turn JPG or PNG images into a PDF.',icon:FileImage}
+ {key:'images' as const,label:'Images to PDF',description:'Turn JPG or PNG images into a PDF.',icon:FileImage},
+ {key:'pdf-images' as const,label:'PDF to Images',description:'Export PDF pages as PNG or JPEG images.',icon:FileImage}
 ];
 type Status = 'idle'|'processing'|'done'|'error';
 
@@ -33,6 +35,10 @@ export default function App() {
  const [pageRange,setPageRange]=useState('1');
  const [splitMode,setSplitMode]=useState<'every'|'ranges'>('every');
  const [splitRangeInput,setSplitRangeInput]=useState('1-3, 5');
+ const [imageFormat,setImageFormat]=useState<ImageFormat>('png');
+ const [imageDpi,setImageDpi]=useState<Resolution>(150);
+ const [imageSelection,setImageSelection]=useState<'all'|'selected'>('all');
+ const [imageRange,setImageRange]=useState('1-3');
  const [pageOrder,setPageOrder]=useState<number[]>([]);
  const [rotation,setRotation]=useState('90');
  const [outputUrl,setOutputUrl]=useState('');
@@ -83,6 +89,39 @@ export default function App() {
    const signatureError = await validateFileSignatures(files);
    checkActive();
    if (signatureError) throw new Error(signatureError);
+   if(activeTool==='pdf-images'){
+    if(files.length!==1)throw new Error('PDF to Images accepts one PDF at a time. Remove extra files.');
+    const { renderPdfAsImages } = await import('./utils/pdfToImages');
+    checkActive();
+    const results=await renderPdfAsImages(files[0],{
+     format:imageFormat,dpi:imageDpi,pages:imageSelection,range:imageRange
+    },controller.signal,checkActive);
+    checkActive();
+    const mime=imageFormat==='png'?'image/png':'image/jpeg';
+    if(results.length===1){
+     const file=results[0];
+     const url=URL.createObjectURL(new Blob([file.bytes as BlobPart],{type:mime}));
+     createdObjectUrls.push(url);
+     checkActive();
+     setOutputUrl(url);setOutputName(file.name);setStatus('done');
+     return;
+    }
+    const archive=createImageZip(results);
+    checkActive();
+    const zip=URL.createObjectURL(new Blob([archive as BlobPart],{type:'application/zip'}));
+    createdObjectUrls.push(zip);
+    const outputLinks:{url:string;name:string}[]=[];
+    for(const result of results){
+     checkActive();
+     const url=URL.createObjectURL(new Blob([result.bytes as BlobPart],{type:mime}));
+     createdObjectUrls.push(url);
+     outputLinks.push({url,name:result.name});
+    }
+    checkActive();
+    setZipUrl(zip);
+    setZipName(files[0].name.replace(/\.pdf$/i,'').replace(/[^a-z0-9-_]+/gi,'-')+'-images.zip');
+    setSplitOutputs(outputLinks);setStatus('done');return;
+   }
    const { PDFDocument, degrees } = await import('pdf-lib');
    let outputBytes:Uint8Array;let name='paperkit-output.pdf';
    if(activeTool==='split'){
@@ -218,12 +257,17 @@ export default function App() {
      )}
      {activeTool==='split'&&<div className="option-row"><label htmlFor="split-mode">Split mode</label><select id="split-mode" value={splitMode} onChange={event=>{setSplitMode(event.target.value as 'every'|'ranges');resetOutput();}}><option value="every">Every page into its own PDF</option><option value="ranges">Custom page ranges</option></select><span className="field-help">Up to {MAX_SPLIT_OUTPUTS} output PDFs per operation.</span></div>}
      {activeTool==='split'&&splitMode==='ranges'&&<div className="option-row"><label htmlFor="split-ranges">Page ranges</label><input id="split-ranges" value={splitRangeInput} onChange={event=>{setSplitRangeInput(event.target.value);resetOutput();}} placeholder="e.g. 1-3, 5, 8-10"/><span className="field-help">Each comma-separated range creates its own PDF. Ranges must not overlap.</span></div>}
+     {activeTool==='pdf-images'&&<div className="option-row"><label htmlFor="image-format">Image format</label><select id="image-format" value={imageFormat} onChange={event=>{resetOutput();setImageFormat(event.target.value as ImageFormat);}}><option value="png">PNG — lossless</option><option value="jpeg">JPEG — smaller files</option></select></div>}
+     {activeTool==='pdf-images'&&<div className="option-row"><label htmlFor="image-dpi">Resolution</label><select id="image-dpi" value={imageDpi} onChange={event=>{resetOutput();setImageDpi(Number(event.target.value) as Resolution);}}><option value="72">72 DPI — small</option><option value="150">150 DPI — standard</option><option value="200">200 DPI — sharp</option><option value="300">300 DPI — high resolution</option></select></div>}
+     {activeTool==='pdf-images'&&<div className="option-row"><label htmlFor="image-pages">Pages to export</label><select id="image-pages" value={imageSelection} onChange={event=>{resetOutput();setImageSelection(event.target.value as 'all'|'selected');}}><option value="all">All pages (up to 100)</option><option value="selected">Selected pages</option></select></div>}
+     {activeTool==='pdf-images'&&imageSelection==='selected'&&<div className="option-row"><label htmlFor="image-page-range">Page numbers or ranges</label><input id="image-page-range" value={imageRange} onChange={event=>{resetOutput();setImageRange(event.target.value);}} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Up to 100 pages, without duplicate outputs.</span></div>}
+     {activeTool==='pdf-images'&&<p className="inline-help">Export up to 100 pages as individual images or a ZIP. Each page is limited to 16 megapixels; lower the DPI for large pages. Files stay on this device.</p>}
      {activeTool==='rotate'&&<div className="option-row"><label htmlFor="rotation">Rotate pages by</label><select id="rotation" value={rotation} onChange={event=>setRotation(event.target.value)}><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">270° clockwise</option></select></div>}
      {(activeTool==='extract'||activeTool==='delete')&&<div className="option-row"><label htmlFor="page-range">{activeTool==='delete'?'Pages to delete':'Pages to extract'}</label><input id="page-range" value={pageRange} onChange={event=>setPageRange(event.target.value)} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Page numbers start at 1.</span></div>}
      {activeTool==='images'&&<p className="inline-help"><FileImage size={15}/> Each image becomes one page; currently PNG and JPG/JPEG.</p>}
      {error&&<div className="alert alert-error" role="alert"><FileWarning size={17}/><span>{error}</span></div>}
-     {status==='done'&&(outputUrl||splitOutputs.length>0)&&<div className="alert alert-success" role="status"><Check size={18}/><span>{splitOutputs.length>0?`Split complete: ${splitOutputs.length} PDFs are ready to download.`:'Your PDF is ready to download.'}</span></div>}
-     <div className="work-actions"><p className="local-badge"><ShieldCheck size={15}/> Processing stays on this device</p>{status==='done'&&(outputUrl||splitOutputs.length>0)?(splitOutputs.length>0?<div className="split-downloads">{zipUrl&&<a className="primary-button process-button" href={zipUrl} download={zipName}><ArrowDownToLine size={18}/> Download all as ZIP</a>}{splitOutputs.map(output=><a key={output.name} className="primary-button process-button" href={output.url} download={output.name}><ArrowDownToLine size={18}/> {output.name}</a>)}</div>:<a className="primary-button process-button" href={outputUrl} download={outputName}><ArrowDownToLine size={18}/> Download PDF</a>):<button className="primary-button process-button" onClick={processFiles} disabled={status==='processing'||files.length===0}>{status==='processing'?<span className="spinner"/>:<Sparkles size={17}/>} {status==='processing'?'Working…':'Process PDF'} <ArrowRight size={16}/></button>}{status==='processing'&&<button className="text-button" onClick={cancelProcessing}>Cancel processing</button>}</div>
+     {status==='done'&&(outputUrl||splitOutputs.length>0)&&<div className="alert alert-success" role="status"><Check size={18}/><span>{activeTool==='pdf-images'?`${splitOutputs.length||1} image${(splitOutputs.length||1)===1?' is':'s are'} ready to download.`:splitOutputs.length>0?`Split complete: ${splitOutputs.length} PDFs are ready to download.`:'Your PDF is ready to download.'}</span></div>}
+     <div className="work-actions"><p className="local-badge"><ShieldCheck size={15}/> Processing stays on this device</p>{status==='done'&&(outputUrl||splitOutputs.length>0)?(splitOutputs.length>0?<div className="split-downloads">{zipUrl&&<a className="primary-button process-button" href={zipUrl} download={zipName}><ArrowDownToLine size={18}/> Download all as ZIP</a>}{splitOutputs.map(output=><a key={output.name} className="primary-button process-button" href={output.url} download={output.name}><ArrowDownToLine size={18}/> {output.name}</a>)}</div>:<a className="primary-button process-button" href={outputUrl} download={outputName}><ArrowDownToLine size={18}/> {activeTool==='pdf-images'?'Download image':'Download PDF'}</a>):<button className="primary-button process-button" onClick={processFiles} disabled={status==='processing'||files.length===0}>{status==='processing'?<span className="spinner"/>:<Sparkles size={17}/>} {status==='processing'?'Working…':'Process PDF'} <ArrowRight size={16}/></button>}{status==='processing'&&<button className="text-button" onClick={cancelProcessing}>Cancel processing</button>}</div>
      {status==='done'&&<button className="start-over" onClick={clearSession}>Done? Clear this session <Trash2 size={14}/></button>}
     </div>
    </section>
