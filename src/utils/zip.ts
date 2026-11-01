@@ -27,7 +27,7 @@ export function crc32(bytes: Uint8Array): number {
 
 /**
  * Creates a standards-compliant ZIP archive using the STORE method (no compression).
- * PDF data is typically already compressed; STORE avoids extra CPU and dependencies.
+ * PDF and raster image data are already compressed; STORE avoids extra CPU and dependencies.
  *
  * The configured output limit includes the entire ZIP archive, not just the PDFs.
  * ZIP64 and streaming archives are intentionally out of scope for the current limits.
@@ -52,7 +52,7 @@ function createStoredZip(
   maxArchiveBytes: number,
   mode: 'pdf' | 'image',
 ): Uint8Array {
-  if (entries.length < 1) throw new Error('There are no PDFs to package.');
+  if (entries.length < 1) throw new Error(mode === 'pdf' ? 'There are no PDFs to package.' : 'There are no images to package.');
   if (entries.length > MAX_SPLIT_OUTPUTS) {
     throw new Error('ZIP downloads support up to ' + MAX_SPLIT_OUTPUTS + ' files.');
   }
@@ -67,7 +67,7 @@ function createStoredZip(
     seen.add(name);
     const filename = encoder.encode(name);
     if (filename.length > 65535) throw new Error('The ZIP filename is too long.');
-    if (bytes.byteLength > 0xffffffff) throw new Error('A PDF is too large for this ZIP format.');
+    if (bytes.byteLength > 0xffffffff) throw new Error('A file is too large for this ZIP format.');
     return { filename, bytes, checksum: crc32(bytes) };
   });
 
