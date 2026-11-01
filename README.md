@@ -22,6 +22,7 @@ A minimalist, open-source PDF workspace inspired by the breadth of modern online
 - Download split results individually or as a single local ZIP archive (STORE/no compression, no extra dependency)
 - Convert PNG/JPEG images to PDF
 - Export PDF pages as PNG/JPEG at 72, 150, 200, or 300 DPI; select page ranges and download individually or as ZIP
+- Compress PDFs with three presets (preserve quality, balanced or small file) and show exact before/after size and percentage saved; keep the original if no improvement is found
 - Local PDF preview (up to the first 6 pages)
 - Drag-and-drop upload, file picker, file removal, output download and responsive layout
 - Extension/MIME validation plus PDF, PNG and JPEG file-signature checks
@@ -41,6 +42,20 @@ Choose **Split PDF** and pick **Every page** or **Custom page ranges**. In custo
 Choose **PDF to Images**, upload **one PDF**, select **PNG** (lossless) or **JPEG** (quality 90%), and set the resolution to **72, 150, 200, or 300 DPI**. Export all pages or specify page numbers/ranges such as `1-3, 5`. A single selected page downloads directly; multiple pages can be downloaded individually or together as a local ZIP archive. Outputs are ordered by page number; repeated page references are deduplicated.
 
 Limits: up to **100 exported pages**, a **250 MB** combined image/ZIP output cap, **16 megapixels** and **8192 pixels per side** per rendered page. Use lower DPI or a smaller page range if a limit is reached. Password-protected PDFs are not currently supported. TIFF export and configurable JPEG quality are future enhancements. Rendering happens locally using PDF.js and browser canvas; no file uploads or document persistence. Generated object URLs are revoked on output replacement, clear, and teardown. PDF.js renders may be canceled between or during page operations.
+
+## Compress PDF usage
+
+Choose **Compress PDF**, upload one PDF, and select a preset:
+
+- **Preserve quality (structural rewrite):** use PDF-Lib object stream serialization to attempt reducing PDF structure without deliberately rasterizing content. **A reduction is not guaranteed.** This processing is not a bit-for-bit identity transformation; existing digital signatures may become invalid if the document is rewritten.
+- **Balanced:** render pages locally to JPEG at **144 DPI**, **76%** quality and reassemble as a PDF.
+- **Small file:** render pages locally to JPEG at **96 DPI**, **55%** quality and reassemble as a PDF.
+
+**Important:** Balanced and Small file **flatten the pages** when they yield a smaller PDF. Searchable/selectable text, annotations, forms, links, accessibility tags, editable PDF objects and existing digital signatures are not retained. Image detail may visibly degrade. Preserve quality is safer for editable documents, although rewriting may still affect specialized PDF features or digital signatures. Password-protected PDFs are not supported.
+
+The workspace shows the **original file size, actual output size and percentage saved**. If a preset produces an equal or larger file, PaperKit **retains the original bytes**, reports **0% saved**, and explains that the document could not be reduced with that preset. It never claims savings where none occurred.
+
+All processing runs locally using existing PDF-Lib/PDF.js and browser canvas, without sending documents to a server or introducing extra dependencies. Limits: **50 MB** source file, **250 MB** candidate output, **up to 500 pages** for structural rewriting or **100 pages** for raster compression, **16 megapixels / 8192 pixels per side** for rasterization, and the existing **2-minute cooperative processing deadline**. Render work can be cancelled during page processing, but an active PDF-Lib operation cannot be forcibly stopped. Temporary canvases and output links are released after use/reset/teardown; full lifecycle verification is tracked separately.
 
 ## Development
 Requires Node.js 20+.
