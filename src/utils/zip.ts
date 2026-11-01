@@ -36,16 +36,32 @@ export function createPdfZip(
   entries: ZipEntry[],
   maxArchiveBytes = RESOURCE_LIMITS.maxOutputBytes,
 ): Uint8Array {
+  return createStoredZip(entries, maxArchiveBytes, 'pdf');
+}
+
+export function createImageZip(
+  entries: ZipEntry[],
+  maxArchiveBytes = RESOURCE_LIMITS.maxOutputBytes,
+): Uint8Array {
+  return createStoredZip(entries, maxArchiveBytes, 'image');
+}
+
+/** Local ZIP with stored PDF or raster-image entries. */
+function createStoredZip(
+  entries: ZipEntry[],
+  maxArchiveBytes: number,
+  mode: 'pdf' | 'image',
+): Uint8Array {
   if (entries.length < 1) throw new Error('There are no PDFs to package.');
   if (entries.length > MAX_SPLIT_OUTPUTS) {
-    throw new Error('ZIP downloads support up to ' + MAX_SPLIT_OUTPUTS + ' PDF files.');
+    throw new Error('ZIP downloads support up to ' + MAX_SPLIT_OUTPUTS + ' files.');
   }
 
   const seen = new Set<string>();
   const records = entries.map(({ name, bytes }) => {
     if (!name || name.includes('/') || name.includes('\\') || name === '.' || name === '..' ||
-        /[\u0000-\u001f]/.test(name) || !name.toLowerCase().endsWith('.pdf')) {
-      throw new Error('A ZIP entry has an invalid PDF filename.');
+        /[\u0000-\u001f]/.test(name) || !(mode === 'pdf' ? /\.pdf$/i.test(name) : /\.(png|jpe?g)$/i.test(name))) {
+      throw new Error(mode === 'pdf' ? 'A ZIP entry has an invalid PDF filename.' : 'A ZIP entry has an invalid image filename.');
     }
     if (seen.has(name)) throw new Error('The ZIP archive contains duplicate filenames.');
     seen.add(name);
