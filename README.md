@@ -43,6 +43,10 @@ Choose **PDF to Images**, upload **one PDF**, select **PNG** (lossless) or **JPE
 
 Limits: up to **100 exported pages**, a **250 MB** combined image/ZIP output cap, **16 megapixels** and **8192 pixels per side** per rendered page. Use lower DPI or a smaller page range if a limit is reached. Password-protected PDFs are not currently supported. TIFF export and configurable JPEG quality are future enhancements. Rendering happens locally using PDF.js and browser canvas; no file uploads or document persistence. Generated object URLs are revoked on output replacement, clear, and teardown. PDF.js renders may be canceled between or during page operations.
 
+## PDF to Text usage
+
+Choose one PDF and leave the range blank for all pages, or enter a range such as `2-3, 5`. Download a UTF-8 text file with form-feed separators between selected pages. Reading order depends on the embedded text layer. Blank or scanned pages retain their position, and an entirely textless selection explains that scans need OCR. Password-protected PDFs are unsupported. Processing and downloads stay local.
+
 ## Compress PDF usage
 
 Choose **Compress PDF**, upload one PDF, and select a preset:

@@ -63,7 +63,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Remove/flatten annotations
 
 ## Convert from PDF
-- [ ] PDF to text
+- [x] PDF to UTF-8 text (all or selected pages, local download)
 - [x] PDF to images (PNG/JPEG, selected pages, 72–300 DPI, local ZIP)
 - [ ] PDF to images in TIFF format
 - [ ] PDF to Word (DOCX)
