@@ -12,7 +12,7 @@ import { mergeFilesInOrder } from './utils/mergePdfFiles';
 import { revokeObjectUrls } from './utils/objectUrl';
 import { assertProcessingActive, createProcessingDeadline, RESOURCE_LIMITS, validateIncomingFiles, validateOutputSize, validatePageCount } from './utils/resourceLimits';
 
-type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress';
+type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress' | 'pdf-text';
 const tools = [
  {key:'merge' as const,label:'Merge PDF',description:'Combine PDFs and images in the order you choose.',icon:Files,tag:'Popular'},
  {key:'rotate' as const,label:'Rotate pages',description:'Turn pages the right way up.',icon:RotateCw},
@@ -22,6 +22,7 @@ const tools = [
  {key:'reorder' as const,label:'Reorder pages',description:'Drag pages into the order you want.',icon:ArrowUpDown},
  {key:'images' as const,label:'Images to PDF',description:'Turn JPG or PNG images into a PDF.',icon:FileImage},
  {key:'pdf-images' as const,label:'PDF to Images',description:'Export PDF pages as PNG or JPEG images.',icon:FileImage},
+ {key:'pdf-text' as const,label:'PDF to Text',description:'Download selectable PDF text as a UTF-8 text file.',icon:FileText},
  {key:'compress' as const,label:'Compress PDF',description:'Reduce PDF size with clear quality trade-offs.',icon:Files}
 ];
 type Status = 'idle'|'processing'|'done'|'error';
@@ -37,6 +38,7 @@ export default function App() {
  const [pageRange,setPageRange]=useState('1');
  const [splitMode,setSplitMode]=useState<'every'|'ranges'>('every');
  const [splitRangeInput,setSplitRangeInput]=useState('1-3, 5');
+ const [textRange,setTextRange]=useState('');
  const [imageFormat,setImageFormat]=useState<ImageFormat>('png');
  const [imageDpi,setImageDpi]=useState<Resolution>(150);
  const [imageSelection,setImageSelection]=useState<'all'|'selected'>('all');
@@ -93,6 +95,15 @@ export default function App() {
    const signatureError = await validateFileSignatures(files);
    checkActive();
    if (signatureError) throw new Error(signatureError);
+   if(activeTool==='pdf-text'){
+    if(files.length!==1)throw new Error('PDF to Text accepts one PDF at a time.');
+    const { extractPdfText } = await import('./utils/pdfToText');
+    const result=await extractPdfText(files[0],textRange.trim()||null,controller.signal,checkActive);
+    checkActive();
+    const url=URL.createObjectURL(result);
+    createdObjectUrls.push(url);
+    setOutputUrl(url);setOutputName('paperkit-text.txt');setStatus('done');return;
+   }
    if(activeTool==='compress'){
     if(files.length!==1)throw new Error('Compress one PDF at a time. Remove extra files.');
     const { compressPdf } = await import('./utils/compressPdf');
@@ -238,11 +249,11 @@ export default function App() {
    }
    checkActive();const outputLimitError=validateOutputSize(outputBytes.byteLength);if(outputLimitError)throw new Error(outputLimitError);
    const outputObjectUrl=URL.createObjectURL(new Blob([outputBytes as BlobPart],{type:'application/pdf'}));createdObjectUrls.push(outputObjectUrl);setOutputUrl(outputObjectUrl);setOutputName(name);setStatus('done');
-  }catch(e){revokeObjectUrls(createdObjectUrls);setError(e instanceof DOMException&&e.name==='AbortError'?'Processing was cancelled.':e instanceof Error?e.message:'We could not process that file. Try another PDF.');setStatus('error');
+  }catch(e){revokeObjectUrls(createdObjectUrls);if(processingControllerRef.current!==controller)return;setError(e instanceof DOMException&&e.name==='AbortError'?'Processing was cancelled.':e instanceof Error?e.message:'We could not process that file. Try another PDF.');setStatus('error');
   }finally{if(processingControllerRef.current===controller)processingControllerRef.current=null;}
  };
  const cancelProcessing=()=>{processingControllerRef.current?.abort();};
- const clearSession=()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setFiles([]);setOutputUrl('');setZipUrl('');setSplitOutputs([]);setCompressionSummary(null);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');if(inputRef.current)inputRef.current.value='';};
+ const clearSession=()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setFiles([]);setOutputUrl('');setZipUrl('');setSplitOutputs([]);setCompressionSummary(null);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');setTextRange('');if(inputRef.current)inputRef.current.value='';};
  const activeToolInfo=tools.find(tool=>tool.key===activeTool)!;const ActiveIcon=activeToolInfo.icon;
  return <div className="app-shell">
   <header className="topbar">
@@ -286,13 +297,14 @@ export default function App() {
      {activeTool==='pdf-images'&&<div className="option-row"><label htmlFor="image-pages">Pages to export</label><select id="image-pages" value={imageSelection} onChange={event=>{resetOutput();setImageSelection(event.target.value as 'all'|'selected');}}><option value="all">All pages (up to 100)</option><option value="selected">Selected pages</option></select></div>}
      {activeTool==='pdf-images'&&imageSelection==='selected'&&<div className="option-row"><label htmlFor="image-page-range">Page numbers or ranges</label><input id="image-page-range" value={imageRange} onChange={event=>{resetOutput();setImageRange(event.target.value);}} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Up to 100 pages, without duplicate outputs.</span></div>}
      {activeTool==='pdf-images'&&<p className="inline-help">Export up to 100 pages as individual images or a ZIP. Each page is limited to 16 megapixels; lower the DPI for large pages. Files stay on this device.</p>}
+     {activeTool==='pdf-text'&&<div className="option-row"><label htmlFor="text-pages">Pages to export</label><input id="text-pages" value={textRange} placeholder="All pages" onChange={event=>{resetOutput();setTextRange(event.target.value);}}/><span className="field-help">Leave blank for all pages or enter a range such as 2-3, 5. Image-only scans require OCR.</span></div>}
      {activeTool==='rotate'&&<div className="option-row"><label htmlFor="rotation">Rotate pages by</label><select id="rotation" value={rotation} onChange={event=>setRotation(event.target.value)}><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">270° clockwise</option></select></div>}
      {(activeTool==='extract'||activeTool==='delete')&&<div className="option-row"><label htmlFor="page-range">{activeTool==='delete'?'Pages to delete':'Pages to extract'}</label><input id="page-range" value={pageRange} onChange={event=>setPageRange(event.target.value)} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Page numbers start at 1.</span></div>}
      {activeTool==='images'&&<p className="inline-help"><FileImage size={15}/> Each image becomes one page; currently PNG and JPG/JPEG.</p>}
      {error&&<div className="alert alert-error" role="alert"><FileWarning size={17}/><span>{error}</span></div>}
-     {status==='done'&&(outputUrl||splitOutputs.length>0)&&<div className="alert alert-success" role="status"><Check size={18}/><span>{activeTool==='pdf-images'?`${splitOutputs.length||1} image${(splitOutputs.length||1)===1?' is':'s are'} ready to download.`:splitOutputs.length>0?`Split complete: ${splitOutputs.length} PDFs are ready to download.`:'Your PDF is ready to download.'}</span></div>}
+     {status==='done'&&(outputUrl||splitOutputs.length>0)&&<div className="alert alert-success" role="status"><Check size={18}/><span>{activeTool==='pdf-images'?`${splitOutputs.length||1} image${(splitOutputs.length||1)===1?' is':'s are'} ready to download.`:splitOutputs.length>0?`Split complete: ${splitOutputs.length} PDFs are ready to download.`:activeTool==='pdf-text'?'Your text file is ready to download.':'Your PDF is ready to download.'}</span></div>}
      {activeTool==='compress'&&compressionSummary&&status==='done'&&<p className="inline-help" data-testid="compression-summary">Original: {formatBytes(compressionSummary.originalBytes)} · Result: {formatBytes(compressionSummary.outputBytes)} · Reduced by {compressionSummary.savingsPercent.toFixed(1)}% ({formatBytes(compressionSummary.savedBytes)} saved). {compressionSummary.usedOriginal?'This PDF could not be reduced with the selected preset; the original file was retained.':compressionPreset==='lossless'?'PDF structure was rewritten without rasterizing pages.':'Compressed pages have been flattened to JPEG images; text and form interactivity are not preserved.'}</p>}
-     <div className="work-actions"><p className="local-badge"><ShieldCheck size={15}/> Processing stays on this device</p>{status==='done'&&(outputUrl||splitOutputs.length>0)?(splitOutputs.length>0?<div className="split-downloads">{zipUrl&&<a className="primary-button process-button" href={zipUrl} download={zipName}><ArrowDownToLine size={18}/> Download all as ZIP</a>}{splitOutputs.map(output=><a key={output.name} className="primary-button process-button" href={output.url} download={output.name}><ArrowDownToLine size={18}/> {output.name}</a>)}</div>:<a className="primary-button process-button" href={outputUrl} download={outputName}><ArrowDownToLine size={18}/> {activeTool==='pdf-images'?'Download image':'Download PDF'}</a>):<button className="primary-button process-button" onClick={processFiles} disabled={status==='processing'||files.length===0}>{status==='processing'?<span className="spinner"/>:<Sparkles size={17}/>} {status==='processing'?'Working…':'Process PDF'} <ArrowRight size={16}/></button>}{status==='processing'&&<button className="text-button" onClick={cancelProcessing}>Cancel processing</button>}</div>
+     <div className="work-actions"><p className="local-badge"><ShieldCheck size={15}/> Processing stays on this device</p>{status==='done'&&(outputUrl||splitOutputs.length>0)?(splitOutputs.length>0?<div className="split-downloads">{zipUrl&&<a className="primary-button process-button" href={zipUrl} download={zipName}><ArrowDownToLine size={18}/> Download all as ZIP</a>}{splitOutputs.map(output=><a key={output.name} className="primary-button process-button" href={output.url} download={output.name}><ArrowDownToLine size={18}/> {output.name}</a>)}</div>:<a className="primary-button process-button" href={outputUrl} download={outputName}><ArrowDownToLine size={18}/> {activeTool==='pdf-images'?'Download image':activeTool==='pdf-text'?'Download text':'Download PDF'}</a>):<button className="primary-button process-button" onClick={processFiles} disabled={status==='processing'||files.length===0}>{status==='processing'?<span className="spinner"/>:<Sparkles size={17}/>} {status==='processing'?'Working…':'Process PDF'} <ArrowRight size={16}/></button>}{status==='processing'&&<button className="text-button" onClick={cancelProcessing}>Cancel processing</button>}</div>
      {status==='done'&&<button className="start-over" onClick={clearSession}>Done? Clear this session <Trash2 size={14}/></button>}
     </div>
    </section>
