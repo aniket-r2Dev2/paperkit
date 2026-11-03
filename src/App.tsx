@@ -1,3 +1,5 @@
+import CropPreview from './components/CropPreview';
+import { cropPages, edges, initialMargins } from './utils/cropPages';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowDownToLine, ArrowRight, ArrowUp, ArrowUpDown, Check, ChevronDown, FileImage, FileText, Files, FileUp, FileWarning, LockKeyhole, Menu, RotateCw, Scissors, ShieldCheck, Sparkles, Trash2, UploadCloud, X } from 'lucide-react';
 import PdfPreview from './components/PdfPreview';
@@ -12,7 +14,7 @@ import { mergeFilesInOrder } from './utils/mergePdfFiles';
 import { revokeObjectUrls } from './utils/objectUrl';
 import { assertProcessingActive, createProcessingDeadline, RESOURCE_LIMITS, validateIncomingFiles, validateOutputSize, validatePageCount } from './utils/resourceLimits';
 
-type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress' | 'pdf-text';
+type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress' | 'pdf-text' | 'crop';
 const tools = [
  {key:'merge' as const,label:'Merge PDF',description:'Combine PDFs and images in the order you choose.',icon:Files,tag:'Popular'},
  {key:'rotate' as const,label:'Rotate pages',description:'Turn pages the right way up.',icon:RotateCw},
@@ -22,6 +24,7 @@ const tools = [
  {key:'reorder' as const,label:'Reorder pages',description:'Drag pages into the order you want.',icon:ArrowUpDown},
  {key:'images' as const,label:'Images to PDF',description:'Turn JPG or PNG images into a PDF.',icon:FileImage},
  {key:'pdf-images' as const,label:'PDF to Images',description:'Export PDF pages as PNG or JPEG images.',icon:FileImage},
+ {key:'crop' as const,label:'Crop PDF',description:'Trim margins on all or selected pages.',icon:Scissors},
  {key:'pdf-text' as const,label:'PDF to Text',description:'Download selectable PDF text as a UTF-8 text file.',icon:FileText},
  {key:'compress' as const,label:'Compress PDF',description:'Reduce PDF size with clear quality trade-offs.',icon:Files}
 ];
@@ -38,6 +41,8 @@ export default function App() {
  const [pageRange,setPageRange]=useState('1');
  const [splitMode,setSplitMode]=useState<'every'|'ranges'>('every');
  const [splitRangeInput,setSplitRangeInput]=useState('1-3, 5');
+ const [cropRange,setCropRange]=useState('');
+ const [margins,setMargins]=useState(initialMargins);
  const [textRange,setTextRange]=useState('');
  const [imageFormat,setImageFormat]=useState<ImageFormat>('png');
  const [imageDpi,setImageDpi]=useState<Resolution>(150);
@@ -157,7 +162,12 @@ export default function App() {
    }
    const { PDFDocument, degrees } = await import('pdf-lib');
    let outputBytes:Uint8Array;let name='paperkit-output.pdf';
-   if(activeTool==='split'){
+   if(activeTool==='crop'){
+    if(files.length!==1)throw new Error('Choose one PDF to crop.');
+    const pdf=await PDFDocument.load(await files[0].arrayBuffer());
+    cropPages(pdf,margins,cropRange,checkActive);
+    outputBytes=await pdf.save();name='paperkit-cropped.pdf';
+   }else if(activeTool==='split'){
     const pdfFiles=files.filter(file=>file.type==='application/pdf'||/\.pdf$/i.test(file.name));
     if(pdfFiles.length!==1)throw new Error('Split one PDF at a time.');
     const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());checkActive();
@@ -253,7 +263,7 @@ export default function App() {
   }finally{if(processingControllerRef.current===controller)processingControllerRef.current=null;}
  };
  const cancelProcessing=()=>{processingControllerRef.current?.abort();};
- const clearSession=()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setFiles([]);setOutputUrl('');setZipUrl('');setSplitOutputs([]);setCompressionSummary(null);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');setTextRange('');if(inputRef.current)inputRef.current.value='';};
+ const clearSession=()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setFiles([]);setOutputUrl('');setZipUrl('');setSplitOutputs([]);setCompressionSummary(null);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');setTextRange('');setCropRange('');setMargins(initialMargins);if(inputRef.current)inputRef.current.value='';};
  const activeToolInfo=tools.find(tool=>tool.key===activeTool)!;const ActiveIcon=activeToolInfo.icon;
  return <div className="app-shell">
   <header className="topbar">
@@ -285,7 +295,7 @@ export default function App() {
        ))}
       </div>
      )}
-     {activeTool !== 'images' && files.some(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) && (
+     {activeTool !== 'crop' && activeTool !== 'images' && files.some(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) && (
       activeTool==='reorder' ? <PageReorder file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} order={pageOrder} onOrderChange={setPageOrder}/> : <PdfPreview file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} />
      )}
      {activeTool==='split'&&<div className="option-row"><label htmlFor="split-mode">Split mode</label><select id="split-mode" value={splitMode} onChange={event=>{setSplitMode(event.target.value as 'every'|'ranges');resetOutput();}}><option value="every">Every page into its own PDF</option><option value="ranges">Custom page ranges</option></select><span className="field-help">Up to {MAX_SPLIT_OUTPUTS} output PDFs per operation.</span></div>}
@@ -297,6 +307,15 @@ export default function App() {
      {activeTool==='pdf-images'&&<div className="option-row"><label htmlFor="image-pages">Pages to export</label><select id="image-pages" value={imageSelection} onChange={event=>{resetOutput();setImageSelection(event.target.value as 'all'|'selected');}}><option value="all">All pages (up to 100)</option><option value="selected">Selected pages</option></select></div>}
      {activeTool==='pdf-images'&&imageSelection==='selected'&&<div className="option-row"><label htmlFor="image-page-range">Page numbers or ranges</label><input id="image-page-range" value={imageRange} onChange={event=>{resetOutput();setImageRange(event.target.value);}} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Up to 100 pages, without duplicate outputs.</span></div>}
      {activeTool==='pdf-images'&&<p className="inline-help">Export up to 100 pages as individual images or a ZIP. Each page is limited to 16 megapixels; lower the DPI for large pages. Files stay on this device.</p>}
+     {activeTool==='crop'&&<section aria-label="Crop settings">
+      <div className="option-row"><label htmlFor="crop-range">Pages to crop</label><input id="crop-range" placeholder="All pages" value={cropRange} onChange={event=>{resetOutput();setCropRange(event.target.value);}}/><span className="field-help">Leave blank for all pages or enter a range such as 2-4, 7.</span></div>
+      {edges.map(edge=>{
+       const update=(value:string)=>{resetOutput();setMargins(current=>({...current,[edge]:Number(value)}));};
+       return <div className="option-row" key={edge}><label htmlFor={'crop-'+edge}>{edge} margin (%)</label><input id={'crop-'+edge} type="number" min="0" max="99" step="any" value={margins[edge]} onChange={event=>update(event.target.value)}/><input aria-label={'Adjust '+edge+' margin'} type="range" min="0" max="99" value={margins[edge]} onChange={event=>update(event.target.value)}/></div>;
+      })}
+      <p className="inline-help">Cropping hides content outside the visible area. Use a redaction tool to permanently remove sensitive information.</p>
+      {files.length===1&&<CropPreview file={files[0]} range={cropRange} margins={margins}/>}
+     </section>}
      {activeTool==='pdf-text'&&<div className="option-row"><label htmlFor="text-pages">Pages to export</label><input id="text-pages" value={textRange} placeholder="All pages" onChange={event=>{resetOutput();setTextRange(event.target.value);}}/><span className="field-help">Leave blank for all pages or enter a range such as 2-3, 5. Image-only scans require OCR.</span></div>}
      {activeTool==='rotate'&&<div className="option-row"><label htmlFor="rotation">Rotate pages by</label><select id="rotation" value={rotation} onChange={event=>setRotation(event.target.value)}><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">270° clockwise</option></select></div>}
      {(activeTool==='extract'||activeTool==='delete')&&<div className="option-row"><label htmlFor="page-range">{activeTool==='delete'?'Pages to delete':'Pages to extract'}</label><input id="page-range" value={pageRange} onChange={event=>setPageRange(event.target.value)} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Page numbers start at 1.</span></div>}
