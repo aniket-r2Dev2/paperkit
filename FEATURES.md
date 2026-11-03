@@ -77,7 +77,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] HTML/web page to PDF (secure renderer and SSRF controls required)
 
 ## Page layout and utility tools
-- [ ] Crop pages
+- [x] Crop all or selected pages using visual margins and a local preview
 - [ ] Resize page dimensions and margins/padding
 - [ ] Flip pages
 - [ ] N-up / multiple pages per sheet
