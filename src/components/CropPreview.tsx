@@ -7,7 +7,7 @@ import { validatePageCount } from '../utils/resourceLimits';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
-export default function CropPreview({ file, range, margins }: { file: File; range: string; margins: Margins }) {
+export default function CropPreview({ file, range, margins }: { file: File | string; range: string; margins?: Margins }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [message, setMessage] = useState('');
   const [pageNumber, setPageNumber] = useState(0);
@@ -18,9 +18,9 @@ export default function CropPreview({ file, range, margins }: { file: File; rang
     setMessage('Preparing preview…');
     async function render() {
       try {
-        const data = await file.arrayBuffer();
+        const source = typeof file === 'string' ? {url: file} : {data: await file.arrayBuffer()};
         if (stopped) return;
-        task = getDocument({data});
+        task = getDocument(source);
         const doc = await task.promise;
         if (stopped) return;
         const limit = validatePageCount(doc.numPages);
@@ -49,13 +49,14 @@ export default function CropPreview({ file, range, margins }: { file: File; rang
     void render();
     return () => { stopped = true; void task?.destroy(); };
   }, [file, range]);
-  const valid = Object.values(margins).every(value => Number.isFinite(value) && value >= 0) &&
+  const valid = !margins || Object.values(margins).every(value => Number.isFinite(value) && value >= 0) &&
     margins.left + margins.right < 100 && margins.top + margins.bottom < 100;
-  return <section aria-label="Crop preview" className="pdf-preview">
-    <p>{!valid ? 'Margins must leave some of the page visible.' : pageNumber ? 'Crop preview · page ' + pageNumber + ' · outlined area will remain visible' : message}</p>
+  const label = margins ? 'Crop preview' : 'Resized result';
+  return <section aria-label={label} className="pdf-preview">
+    <p>{!valid ? 'Margins must leave some of the page visible.' : pageNumber ? label + ' · page ' + pageNumber + (margins ? ' · outlined area will remain visible' : '') : message}</p>
     <div className="crop-sheet" hidden={!pageNumber || !valid}>
       <canvas ref={canvas}/>
-      <div className="crop-outline" style={{inset: [margins.top,margins.right,margins.bottom,margins.left].map(v=>v+'%').join(' ')}}/>
+      {margins && <div className="crop-outline" style={{inset: [margins.top,margins.right,margins.bottom,margins.left].map(v=>v+'%').join(' ')}}/>}
     </div>
   </section>;
 }
