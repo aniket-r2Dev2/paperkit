@@ -1,0 +1,41 @@
+import { expect, test } from '@playwright/test';
+import { PDFDocument, rgb } from 'pdf-lib';
+import { readFile } from 'node:fs/promises';
+
+test('resizes selected content, previews actual padding and revokes the download', async ({page})=>{
+  const src=await PDFDocument.create();
+  src.addPage([200,400]);
+  const sheet=src.addPage([200,200]);
+  sheet.drawRectangle({x:0,y:0,width:200,height:200,color:rgb(1,0,0)});
+  sheet.drawRectangle({x:50,y:50,width:100,height:100,color:rgb(0,0,1)});
+  sheet.setCropBox(50,50,100,100);
+  await page.goto('/');
+  await page.getByRole('button',{name:/Resize PDF/}).click();
+  await page.locator('input[type=file]').setInputFiles({name:'sample.pdf',mimeType:'application/pdf',buffer:Buffer.from(await src.save())});
+  await page.getByLabel('Sheet size').selectOption('custom');
+  await page.getByLabel('Width (mm)').fill('200');
+  await page.getByLabel('Height (mm)').fill('100');
+  await page.getByLabel('Pages to resize').fill('2');
+  await page.getByRole('button',{name:'Process PDF'}).click();
+  const preview=page.getByRole('region',{name:'Resized result'});
+  await expect(preview).toContainText('page 2');
+  const pixels=await preview.locator('canvas').evaluate(canvas=>{
+    const context=canvas.getContext('2d')!;
+    return [0.1,0.5,0.9].map(f=>Array.from(context.getImageData(canvas.width*f,canvas.height/2,1,1).data).slice(0,3));
+  });
+  expect(pixels).toEqual([[255,255,255],[0,0,255],[255,255,255]]);
+  const link=page.getByRole('link',{name:'Download PDF'});
+  const pending=page.waitForEvent('download');
+  await link.click();
+  const download=await pending;
+  expect(download.suggestedFilename()).toBe('paperkit-resized.pdf');
+  const pdf=await PDFDocument.load(await readFile((await download.path())!));
+  expect(pdf.getPage(0).getSize()).toEqual({width:200,height:400});
+  expect(pdf.getPage(1).getWidth()).toBeCloseTo(200*72/25.4);
+  const url=await link.getAttribute('href');
+  await page.getByLabel('Width (mm)').fill('0');
+  await expect(preview).toHaveCount(0);
+  expect(await page.evaluate(async href=>{try{await fetch(href!);return true;}catch{return false;}},url)).toBe(false);
+  await page.getByRole('button',{name:'Process PDF'}).click();
+  await expect(page.getByRole('alert')).toContainText('between 1 and 5080');
+});

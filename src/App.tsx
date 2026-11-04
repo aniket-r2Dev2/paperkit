@@ -1,3 +1,4 @@
+import { paperSizes } from './utils/resizeOptions';
 import CropPreview from './components/CropPreview';
 import { cropPages, edges, initialMargins } from './utils/cropPages';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -14,7 +15,7 @@ import { mergeFilesInOrder } from './utils/mergePdfFiles';
 import { revokeObjectUrls } from './utils/objectUrl';
 import { assertProcessingActive, createProcessingDeadline, RESOURCE_LIMITS, validateIncomingFiles, validateOutputSize, validatePageCount } from './utils/resourceLimits';
 
-type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress' | 'pdf-text' | 'crop';
+type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress' | 'pdf-text' | 'crop' | 'resize';
 const tools = [
  {key:'merge' as const,label:'Merge PDF',description:'Combine PDFs and images in the order you choose.',icon:Files,tag:'Popular'},
  {key:'rotate' as const,label:'Rotate pages',description:'Turn pages the right way up.',icon:RotateCw},
@@ -24,6 +25,7 @@ const tools = [
  {key:'reorder' as const,label:'Reorder pages',description:'Drag pages into the order you want.',icon:ArrowUpDown},
  {key:'images' as const,label:'Images to PDF',description:'Turn JPG or PNG images into a PDF.',icon:FileImage},
  {key:'pdf-images' as const,label:'PDF to Images',description:'Export PDF pages as PNG or JPEG images.',icon:FileImage},
+ {key:'resize' as const,label:'Resize PDF',description:'Fit PDF pages to a standard or custom sheet.',icon:Files},
  {key:'crop' as const,label:'Crop PDF',description:'Trim margins on all or selected pages.',icon:Scissors},
  {key:'pdf-text' as const,label:'PDF to Text',description:'Download selectable PDF text as a UTF-8 text file.',icon:FileText},
  {key:'compress' as const,label:'Compress PDF',description:'Reduce PDF size with clear quality trade-offs.',icon:Files}
@@ -41,6 +43,10 @@ export default function App() {
  const [pageRange,setPageRange]=useState('1');
  const [splitMode,setSplitMode]=useState<'every'|'ranges'>('every');
  const [splitRangeInput,setSplitRangeInput]=useState('1-3, 5');
+ const [size,setSize]=useState<keyof typeof paperSizes|'custom'>('A4');
+ const [customWidth,setCustomWidth]=useState('210');
+ const [customHeight,setCustomHeight]=useState('297');
+ const [resizeRange,setResizeRange]=useState('');
  const [cropRange,setCropRange]=useState('');
  const [margins,setMargins]=useState(initialMargins);
  const [textRange,setTextRange]=useState('');
@@ -162,7 +168,14 @@ export default function App() {
    }
    const { PDFDocument, degrees } = await import('pdf-lib');
    let outputBytes:Uint8Array;let name='paperkit-output.pdf';
-   if(activeTool==='crop'){
+   if(activeTool==='resize'){
+    if(files.length!==1)throw new Error('Choose one PDF to resize.');
+    const { resizePages }=await import('./utils/resizePages');
+    const pdf=await PDFDocument.load(await files[0].arrayBuffer());
+    const [width,height]=size==='custom'?[Number(customWidth),Number(customHeight)]:paperSizes[size];
+    resizePages(pdf,width,height,resizeRange,checkActive);
+    outputBytes=await pdf.save();name='paperkit-resized.pdf';
+   }else if(activeTool==='crop'){
     if(files.length!==1)throw new Error('Choose one PDF to crop.');
     const pdf=await PDFDocument.load(await files[0].arrayBuffer());
     cropPages(pdf,margins,cropRange,checkActive);
@@ -263,7 +276,7 @@ export default function App() {
   }finally{if(processingControllerRef.current===controller)processingControllerRef.current=null;}
  };
  const cancelProcessing=()=>{processingControllerRef.current?.abort();};
- const clearSession=()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setFiles([]);setOutputUrl('');setZipUrl('');setSplitOutputs([]);setCompressionSummary(null);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');setTextRange('');setCropRange('');setMargins(initialMargins);if(inputRef.current)inputRef.current.value='';};
+ const clearSession=()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setFiles([]);setOutputUrl('');setZipUrl('');setSplitOutputs([]);setCompressionSummary(null);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');setTextRange('');setCropRange('');setResizeRange('');setSize('A4');setCustomWidth('210');setCustomHeight('297');setMargins(initialMargins);if(inputRef.current)inputRef.current.value='';};
  const activeToolInfo=tools.find(tool=>tool.key===activeTool)!;const ActiveIcon=activeToolInfo.icon;
  return <div className="app-shell">
   <header className="topbar">
@@ -295,7 +308,7 @@ export default function App() {
        ))}
       </div>
      )}
-     {activeTool !== 'crop' && activeTool !== 'images' && files.some(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) && (
+     {activeTool !== 'resize' && activeTool !== 'crop' && activeTool !== 'images' && files.some(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) && (
       activeTool==='reorder' ? <PageReorder file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} order={pageOrder} onOrderChange={setPageOrder}/> : <PdfPreview file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} />
      )}
      {activeTool==='split'&&<div className="option-row"><label htmlFor="split-mode">Split mode</label><select id="split-mode" value={splitMode} onChange={event=>{setSplitMode(event.target.value as 'every'|'ranges');resetOutput();}}><option value="every">Every page into its own PDF</option><option value="ranges">Custom page ranges</option></select><span className="field-help">Up to {MAX_SPLIT_OUTPUTS} output PDFs per operation.</span></div>}
@@ -307,6 +320,15 @@ export default function App() {
      {activeTool==='pdf-images'&&<div className="option-row"><label htmlFor="image-pages">Pages to export</label><select id="image-pages" value={imageSelection} onChange={event=>{resetOutput();setImageSelection(event.target.value as 'all'|'selected');}}><option value="all">All pages (up to 100)</option><option value="selected">Selected pages</option></select></div>}
      {activeTool==='pdf-images'&&imageSelection==='selected'&&<div className="option-row"><label htmlFor="image-page-range">Page numbers or ranges</label><input id="image-page-range" value={imageRange} onChange={event=>{resetOutput();setImageRange(event.target.value);}} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Up to 100 pages, without duplicate outputs.</span></div>}
      {activeTool==='pdf-images'&&<p className="inline-help">Export up to 100 pages as individual images or a ZIP. Each page is limited to 16 megapixels; lower the DPI for large pages. Files stay on this device.</p>}
+     {activeTool==='resize'&&<section aria-label="Resize settings">
+      <div className="option-row"><label htmlFor="sheet-size">Sheet size</label><select id="sheet-size" value={size} onChange={e=>{resetOutput();setSize(e.target.value as typeof size);}}>
+       {Object.entries(paperSizes).map(([name,[w,h]])=><option key={name} value={name}>{name} ({w} × {h} mm)</option>)}<option value="custom">Custom dimensions</option>
+      </select></div>
+      {size==='custom'&&<div className="option-row"><label htmlFor="sheet-width">Width (mm)</label><input id="sheet-width" type="number" min="1" max="5080" step="any" value={customWidth} onChange={e=>{resetOutput();setCustomWidth(e.target.value);}}/><label htmlFor="sheet-height">Height (mm)</label><input id="sheet-height" type="number" min="1" max="5080" step="any" value={customHeight} onChange={e=>{resetOutput();setCustomHeight(e.target.value);}}/></div>}
+      <div className="option-row"><label htmlFor="resize-pages">Pages to resize</label><input id="resize-pages" value={resizeRange} placeholder="All pages" onChange={e=>{resetOutput();setResizeRange(e.target.value);}}/></div>
+      <p className="inline-help">Leave the range blank for all pages, or enter a range such as 2-4. Visible content is centered and scaled proportionally. Selected pages with links, forms or annotations are unsupported.</p>
+      {outputUrl&&<CropPreview file={outputUrl} range={resizeRange}/>}
+     </section>}
      {activeTool==='crop'&&<section aria-label="Crop settings">
       <div className="option-row"><label htmlFor="crop-range">Pages to crop</label><input id="crop-range" placeholder="All pages" value={cropRange} onChange={event=>{resetOutput();setCropRange(event.target.value);}}/><span className="field-help">Leave blank for all pages or enter a range such as 2-4, 7.</span></div>
       {edges.map(edge=>{

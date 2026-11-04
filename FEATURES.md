@@ -78,7 +78,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 
 ## Page layout and utility tools
 - [x] Crop all or selected pages using visual margins and a local preview
-- [ ] Resize page dimensions and margins/padding
+- [x] Resize pages to standard or custom dimensions with proportional fit and centered padding
 - [ ] Flip pages
 - [ ] N-up / multiple pages per sheet
 - [ ] Grayscale

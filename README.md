@@ -43,6 +43,10 @@ Choose **PDF to Images**, upload **one PDF**, select **PNG** (lossless) or **JPE
 
 Limits: up to **100 exported pages**, a **250 MB** combined image/ZIP output cap, **16 megapixels** and **8192 pixels per side** per rendered page. Use lower DPI or a smaller page range if a limit is reached. Password-protected PDFs are not currently supported. TIFF export and configurable JPEG quality are future enhancements. Rendering happens locally using PDF.js and browser canvas; no file uploads or document persistence. Generated object URLs are revoked on output replacement, clear, and teardown. PDF.js renders may be canceled between or during page operations.
 
+## Resize PDF usage
+
+Choose A4, A3, Letter, Legal, or enter a custom width and height in millimetres (1–5080 per side). Leave the range blank for all pages. PaperKit fits the visible area proportionally, centers it on the sheet, and previews the first selected page from the finished PDF. Existing crops stay clipped and text stays selectable. Selected pages with annotations, links, or form widgets cannot be resized. Custom print boxes on resized pages reset to the new sheet. Processing stays on this device.
+
 ## Crop PDF usage
 
 Set the four margins as percentages of the visible page, using the sliders or number fields. Leave the page range blank for all pages. The preview outlines the retained area on the first selected page. The downloaded PDF preserves page order, rotation and underlying content. Cropped content can be recovered, so use a dedicated redaction tool for sensitive information.
