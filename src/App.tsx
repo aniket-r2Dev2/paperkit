@@ -1,3 +1,4 @@
+import FillForm from './components/FillForm';
 import { paperSizes } from './utils/resizeOptions';
 import CropPreview from './components/CropPreview';
 import { cropPages, edges, initialMargins } from './utils/cropPages';
@@ -15,7 +16,7 @@ import { mergeFilesInOrder } from './utils/mergePdfFiles';
 import { revokeObjectUrls } from './utils/objectUrl';
 import { assertProcessingActive, createProcessingDeadline, RESOURCE_LIMITS, validateIncomingFiles, validateOutputSize, validatePageCount } from './utils/resourceLimits';
 
-type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress' | 'pdf-text' | 'crop' | 'resize';
+type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress' | 'pdf-text' | 'crop' | 'resize' | 'forms';
 const tools = [
  {key:'merge' as const,label:'Merge PDF',description:'Combine PDFs and images in the order you choose.',icon:Files,tag:'Popular'},
  {key:'rotate' as const,label:'Rotate pages',description:'Turn pages the right way up.',icon:RotateCw},
@@ -25,6 +26,7 @@ const tools = [
  {key:'reorder' as const,label:'Reorder pages',description:'Drag pages into the order you want.',icon:ArrowUpDown},
  {key:'images' as const,label:'Images to PDF',description:'Turn JPG or PNG images into a PDF.',icon:FileImage},
  {key:'pdf-images' as const,label:'PDF to Images',description:'Export PDF pages as PNG or JPEG images.',icon:FileImage},
+ {key:'forms' as const,label:'Fill PDF Form',description:'Complete existing text, checkbox and radio fields.',icon:FileText},
  {key:'resize' as const,label:'Resize PDF',description:'Fit PDF pages to a standard or custom sheet.',icon:Files},
  {key:'crop' as const,label:'Crop PDF',description:'Trim margins on all or selected pages.',icon:Scissors},
  {key:'pdf-text' as const,label:'PDF to Text',description:'Download selectable PDF text as a UTF-8 text file.',icon:FileText},
@@ -345,7 +347,8 @@ export default function App() {
      {error&&<div className="alert alert-error" role="alert"><FileWarning size={17}/><span>{error}</span></div>}
      {status==='done'&&(outputUrl||splitOutputs.length>0)&&<div className="alert alert-success" role="status"><Check size={18}/><span>{activeTool==='pdf-images'?`${splitOutputs.length||1} image${(splitOutputs.length||1)===1?' is':'s are'} ready to download.`:splitOutputs.length>0?`Split complete: ${splitOutputs.length} PDFs are ready to download.`:activeTool==='pdf-text'?'Your text file is ready to download.':'Your PDF is ready to download.'}</span></div>}
      {activeTool==='compress'&&compressionSummary&&status==='done'&&<p className="inline-help" data-testid="compression-summary">Original: {formatBytes(compressionSummary.originalBytes)} · Result: {formatBytes(compressionSummary.outputBytes)} · Reduced by {compressionSummary.savingsPercent.toFixed(1)}% ({formatBytes(compressionSummary.savedBytes)} saved). {compressionSummary.usedOriginal?'This PDF could not be reduced with the selected preset; the original file was retained.':compressionPreset==='lossless'?'PDF structure was rewritten without rasterizing pages.':'Compressed pages have been flattened to JPEG images; text and form interactivity are not preserved.'}</p>}
-     <div className="work-actions"><p className="local-badge"><ShieldCheck size={15}/> Processing stays on this device</p>{status==='done'&&(outputUrl||splitOutputs.length>0)?(splitOutputs.length>0?<div className="split-downloads">{zipUrl&&<a className="primary-button process-button" href={zipUrl} download={zipName}><ArrowDownToLine size={18}/> Download all as ZIP</a>}{splitOutputs.map(output=><a key={output.name} className="primary-button process-button" href={output.url} download={output.name}><ArrowDownToLine size={18}/> {output.name}</a>)}</div>:<a className="primary-button process-button" href={outputUrl} download={outputName}><ArrowDownToLine size={18}/> {activeTool==='pdf-images'?'Download image':activeTool==='pdf-text'?'Download text':'Download PDF'}</a>):<button className="primary-button process-button" onClick={processFiles} disabled={status==='processing'||files.length===0}>{status==='processing'?<span className="spinner"/>:<Sparkles size={17}/>} {status==='processing'?'Working…':'Process PDF'} <ArrowRight size={16}/></button>}{status==='processing'&&<button className="text-button" onClick={cancelProcessing}>Cancel processing</button>}</div>
+     {activeTool==='forms'&&(files.length===1?<FillForm key={files[0].name+files[0].size+files[0].lastModified} file={files[0]}/>:<p>Choose one PDF with existing form fields.</p>)}
+     {activeTool!=='forms'&&<div className="work-actions"><p className="local-badge"><ShieldCheck size={15}/> Processing stays on this device</p>{status==='done'&&(outputUrl||splitOutputs.length>0)?(splitOutputs.length>0?<div className="split-downloads">{zipUrl&&<a className="primary-button process-button" href={zipUrl} download={zipName}><ArrowDownToLine size={18}/> Download all as ZIP</a>}{splitOutputs.map(output=><a key={output.name} className="primary-button process-button" href={output.url} download={output.name}><ArrowDownToLine size={18}/> {output.name}</a>)}</div>:<a className="primary-button process-button" href={outputUrl} download={outputName}><ArrowDownToLine size={18}/> {activeTool==='pdf-images'?'Download image':activeTool==='pdf-text'?'Download text':'Download PDF'}</a>):<button className="primary-button process-button" onClick={processFiles} disabled={status==='processing'||files.length===0}>{status==='processing'?<span className="spinner"/>:<Sparkles size={17}/>} {status==='processing'?'Working…':'Process PDF'} <ArrowRight size={16}/></button>}{status==='processing'&&<button className="text-button" onClick={cancelProcessing}>Cancel processing</button>}</div>}
      {status==='done'&&<button className="start-over" onClick={clearSession}>Done? Clear this session <Trash2 size={14}/></button>}
     </div>
    </section>
