@@ -41,7 +41,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Selectable page thumbnails for targeted operations
 - [ ] Add text and image overlays
 - [ ] Annotations, highlights, strike-through, shapes and links
-- [ ] Fill existing AcroForm fields
+- [x] Fill existing AcroForm text, checkbox and radio fields with editable or flattened downloads
 - [ ] Add signature by draw/type/upload
 - [ ] Create fillable forms
 - [ ] Remove annotations

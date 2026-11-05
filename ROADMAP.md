@@ -34,7 +34,8 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [x] Resize all or selected pages to standard or custom dimensions
 - [ ] Add watermark, page numbers, header/footer
 - [x] Compress PDF with structural (preserve quality) and raster (balanced/small) presets, with explicit flattening warnings, before/after sizes and no-growth fallback
-- [ ] Fill forms and add signatures
+- [x] Fill existing text, checkbox and radio fields
+- [ ] Add signatures
 - [ ] Protect PDF / unlock with supplied password and authorization
 - [x] Images-to-PDF
 - [x] PDF-to-images (PNG/JPEG, page selection, DPI, ZIP downloads)
