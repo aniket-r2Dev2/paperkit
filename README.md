@@ -91,3 +91,7 @@ The prototype does not send selected files to a PaperKit server or persist them.
 
 ## Licensing
 Original PaperKit code is provided under the MIT License. Review each dependency's license and any external processing engine before bundling or distribution.
+
+## Fill PDF Form usage
+
+Choose one standard PDF containing existing form fields. Edit text, checkbox and radio values, then save an editable PDF or choose to flatten all form fields. Read-only and unsupported fields retain their values. Text entry supports Helvetica's Western European character set. XFA and encrypted PDFs are unsupported. Limits are 200 fields, 500 pages and the existing upload/output caps. Form values stay in page memory until Clear all or switching tools. Signature placement is planned.
