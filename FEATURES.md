@@ -42,7 +42,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Add text and image overlays
 - [ ] Annotations, highlights, strike-through, shapes and links
 - [x] Fill existing AcroForm text, checkbox and radio fields with editable or flattened downloads
-- [ ] Add signature by draw/type/upload
+- [x] Add signature by draw/type/upload with position and size controls
 - [ ] Create fillable forms
 - [ ] Remove annotations
 - [ ] Add headers and footers
