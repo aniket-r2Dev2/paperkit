@@ -95,3 +95,7 @@ Original PaperKit code is provided under the MIT License. Review each dependency
 ## Fill PDF Form usage
 
 Choose one standard PDF containing existing form fields. Edit text, checkbox and radio values, then save an editable PDF or choose to flatten all form fields. Read-only and unsupported fields retain their values. Text entry supports Helvetica's Western European character set. XFA and encrypted PDFs are unsupported. Limits are 200 fields, 500 pages and the existing upload/output caps. Form values stay in page memory until Clear all or switching tools. Signature placement is planned.
+
+## Sign PDF usage
+
+Choose one PDF and type, draw, or upload a PNG/JPEG signature. Select a page and adjust position and size using the percentage controls. The preview and output follow the page's displayed rotation and crop. The signature is embedded as an image, while existing form fields remain editable. This provides a visual signature without digital certificate verification. Uploads are limited to 2 MB and 4 megapixels. Signature data stays in page memory and is discarded on Clear all or switching tools.
