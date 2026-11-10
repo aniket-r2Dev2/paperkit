@@ -45,9 +45,10 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [x] Add signature by draw/type/upload with position and size controls
 - [ ] Create fillable forms
 - [ ] Remove annotations
-- [ ] Add headers and footers
-- [ ] Add page numbers and Bates numbering
-- [ ] Watermarks
+- [x] Add headers and footers
+- [x] Add page numbers
+- [ ] Bates numbering
+- [x] Text watermarks
 - [ ] Edit metadata
 - [ ] Flatten form fields/annotations
 

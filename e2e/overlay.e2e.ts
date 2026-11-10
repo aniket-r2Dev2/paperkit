@@ -1,0 +1,30 @@
+import { expect, test } from '@playwright/test';
+import { PDFDocument, degrees } from 'pdf-lib';
+import { readFile } from 'node:fs/promises';
+
+test('selected rotated pages receive selectable labels with numbering and cleanup',async({page})=>{
+  const pdf=await PDFDocument.create();
+  pdf.addPage([300,400]);
+  pdf.addPage([300,400]).setRotation(degrees(90));
+  pdf.addPage([300,400]);
+  await page.goto('/');
+  await page.getByRole('button',{name:/Watermark & page labels/}).click();
+  await page.locator('input[type=file]').setInputFiles({name:'input.pdf',mimeType:'application/pdf',buffer:Buffer.from(await pdf.save())});
+  await page.getByLabel('Label type').selectOption('numbers');
+  await page.getByLabel('Pages to label').fill('2-3');
+  await page.getByLabel('Starting number').fill('10');
+  await page.getByRole('button',{name:'Process PDF'}).click();
+  await expect(page.getByRole('region',{name:'Result preview'})).toContainText('page 2');
+  const link=page.getByRole('link',{name:'Download PDF'});
+  const pending=page.waitForEvent('download');await link.click();
+  const bytes=await readFile((await (await pending).path())!);
+  const url=await link.getAttribute('href');
+  await page.getByRole('button',{name:'Clear all',exact:true}).click();
+  expect(await page.evaluate(async href=>{try{await fetch(href!);return true;}catch{return false;}},url)).toBe(false);
+  await page.getByRole('button',{name:/PDF to Text/}).click();
+  await page.locator('input[type=file]').setInputFiles({name:'labelled.pdf',mimeType:'application/pdf',buffer:bytes});
+  await page.getByRole('button',{name:'Process PDF'}).click();
+  const textReady=page.waitForEvent('download');await page.getByRole('link',{name:'Download text'}).click();
+  const text=await readFile((await (await textReady).path())!,'utf8');
+  expect(text.split('\f').map(s=>s.trim())).toEqual(['','Page 10','Page 11']);
+});
