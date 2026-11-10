@@ -99,3 +99,7 @@ Choose one standard PDF containing existing form fields. Edit text, checkbox and
 ## Sign PDF usage
 
 Choose one PDF and type, draw, or upload a PNG/JPEG signature. Select a page and adjust position and size using the percentage controls. The preview and output follow the page's displayed rotation and crop. The signature is embedded as an image, while existing form fields remain editable. This provides a visual signature without digital certificate verification. Uploads are limited to 2 MB and 4 megapixels. Signature data stays in page memory and is discarded on Clear all or switching tools.
+
+## Watermark and page labels
+
+Choose a watermark, page number, header or footer. Enter one line of text and optionally use {page}, {pages}, {number}, or {date}. Source page numbers follow the PDF, sequential numbers follow selected pages starting at your chosen value, and dates use UTC. Leave the range empty for all pages. Configure font size, opacity, angle and position. Labels remain selectable text, use Helvetica's Western European character set, and must fit within each visible page. The result preview shows the first selected page after processing. Files stay local.

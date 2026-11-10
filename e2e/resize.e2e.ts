@@ -17,7 +17,7 @@ test('resizes selected content, previews actual padding and revokes the download
   await page.getByLabel('Height (mm)').fill('100');
   await page.getByLabel('Pages to resize').fill('2');
   await page.getByRole('button',{name:'Process PDF'}).click();
-  const preview=page.getByRole('region',{name:'Resized result'});
+  const preview=page.getByRole('region',{name:'Result preview'});
   await expect(preview).toContainText('page 2');
   const pixels=await preview.locator('canvas').evaluate(canvas=>{
     const context=canvas.getContext('2d')!;

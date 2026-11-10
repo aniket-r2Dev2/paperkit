@@ -1,4 +1,4 @@
-export type FileTool = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress' | 'pdf-text' | 'crop' | 'resize' | 'forms' | 'sign';
+export type FileTool = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress' | 'pdf-text' | 'crop' | 'resize' | 'forms' | 'sign' | 'overlay';
 
 type FileDescriptor = Pick<File, 'type' | 'name'>;
 

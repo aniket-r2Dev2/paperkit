@@ -32,7 +32,7 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 ## Milestone 2 — Common PDF tools (P1)
 - [x] Crop all or selected pages with a local preview
 - [x] Resize all or selected pages to standard or custom dimensions
-- [ ] Add watermark, page numbers, header/footer
+- [x] Add text watermarks, page numbers, headers and footers with page selection
 - [x] Compress PDF with structural (preserve quality) and raster (balanced/small) presets, with explicit flattening warnings, before/after sizes and no-growth fallback
 - [x] Fill existing text, checkbox and radio fields
 - [x] Add signatures with type, draw or upload and page placement

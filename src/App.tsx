@@ -1,3 +1,4 @@
+import type { OverlayOptions } from './utils/pageOverlay';
 import SignPdf from './components/SignPdf';
 import FillForm from './components/FillForm';
 import { paperSizes } from './utils/resizeOptions';
@@ -17,7 +18,7 @@ import { mergeFilesInOrder } from './utils/mergePdfFiles';
 import { revokeObjectUrls } from './utils/objectUrl';
 import { assertProcessingActive, createProcessingDeadline, RESOURCE_LIMITS, validateIncomingFiles, validateOutputSize, validatePageCount } from './utils/resourceLimits';
 
-type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress' | 'pdf-text' | 'crop' | 'resize' | 'forms' | 'sign';
+type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress' | 'pdf-text' | 'crop' | 'resize' | 'forms' | 'sign' | 'overlay';
 const tools = [
  {key:'merge' as const,label:'Merge PDF',description:'Combine PDFs and images in the order you choose.',icon:Files,tag:'Popular'},
  {key:'rotate' as const,label:'Rotate pages',description:'Turn pages the right way up.',icon:RotateCw},
@@ -27,6 +28,7 @@ const tools = [
  {key:'reorder' as const,label:'Reorder pages',description:'Drag pages into the order you want.',icon:ArrowUpDown},
  {key:'images' as const,label:'Images to PDF',description:'Turn JPG or PNG images into a PDF.',icon:FileImage},
  {key:'pdf-images' as const,label:'PDF to Images',description:'Export PDF pages as PNG or JPEG images.',icon:FileImage},
+ {key:'overlay' as const,label:'Watermark & page labels',description:'Add watermarks, numbering, headers and footers.',icon:FileText},
  {key:'sign' as const,label:'Sign PDF',description:'Type, draw or upload and place a signature.',icon:FileText},
  {key:'forms' as const,label:'Fill PDF Form',description:'Complete existing text, checkbox and radio fields.',icon:FileText},
  {key:'resize' as const,label:'Resize PDF',description:'Fit PDF pages to a standard or custom sheet.',icon:Files},
@@ -51,6 +53,7 @@ export default function App() {
  const [customWidth,setCustomWidth]=useState('210');
  const [customHeight,setCustomHeight]=useState('297');
  const [resizeRange,setResizeRange]=useState('');
+ const [overlay,setOverlay]=useState<OverlayOptions>({kind:'watermark',text:'DRAFT',range:'',size:36,opacity:0.25,angle:0,start:1,x:50,y:50});
  const [cropRange,setCropRange]=useState('');
  const [margins,setMargins]=useState(initialMargins);
  const [textRange,setTextRange]=useState('');
@@ -172,7 +175,13 @@ export default function App() {
    }
    const { PDFDocument, degrees } = await import('pdf-lib');
    let outputBytes:Uint8Array;let name='paperkit-output.pdf';
-   if(activeTool==='resize'){
+   if(activeTool==='overlay'){
+    if(files.length!==1)throw new Error('Choose one PDF to label.');
+    const { addPageOverlay }=await import('./utils/pageOverlay');
+    const pdf=await PDFDocument.load(await files[0].arrayBuffer());
+    await addPageOverlay(pdf,overlay,checkActive);
+    outputBytes=await pdf.save();name='paperkit-labelled.pdf';
+   }else if(activeTool==='resize'){
     if(files.length!==1)throw new Error('Choose one PDF to resize.');
     const { resizePages }=await import('./utils/resizePages');
     const pdf=await PDFDocument.load(await files[0].arrayBuffer());
@@ -280,7 +289,7 @@ export default function App() {
   }finally{if(processingControllerRef.current===controller)processingControllerRef.current=null;}
  };
  const cancelProcessing=()=>{processingControllerRef.current?.abort();};
- const clearSession=()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setFiles([]);setOutputUrl('');setZipUrl('');setSplitOutputs([]);setCompressionSummary(null);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');setTextRange('');setCropRange('');setResizeRange('');setSize('A4');setCustomWidth('210');setCustomHeight('297');setMargins(initialMargins);if(inputRef.current)inputRef.current.value='';};
+ const clearSession=()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setFiles([]);setOutputUrl('');setZipUrl('');setSplitOutputs([]);setCompressionSummary(null);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');setTextRange('');setOverlay({kind:'watermark',text:'DRAFT',range:'',size:36,opacity:0.25,angle:0,start:1,x:50,y:50});setCropRange('');setResizeRange('');setSize('A4');setCustomWidth('210');setCustomHeight('297');setMargins(initialMargins);if(inputRef.current)inputRef.current.value='';};
  const activeToolInfo=tools.find(tool=>tool.key===activeTool)!;const ActiveIcon=activeToolInfo.icon;
  return <div className="app-shell">
   <header className="topbar">
@@ -324,6 +333,17 @@ export default function App() {
      {activeTool==='pdf-images'&&<div className="option-row"><label htmlFor="image-pages">Pages to export</label><select id="image-pages" value={imageSelection} onChange={event=>{resetOutput();setImageSelection(event.target.value as 'all'|'selected');}}><option value="all">All pages (up to 100)</option><option value="selected">Selected pages</option></select></div>}
      {activeTool==='pdf-images'&&imageSelection==='selected'&&<div className="option-row"><label htmlFor="image-page-range">Page numbers or ranges</label><input id="image-page-range" value={imageRange} onChange={event=>{resetOutput();setImageRange(event.target.value);}} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Up to 100 pages, without duplicate outputs.</span></div>}
      {activeTool==='pdf-images'&&<p className="inline-help">Export up to 100 pages as individual images or a ZIP. Each page is limited to 16 megapixels; lower the DPI for large pages. Files stay on this device.</p>}
+     {activeTool==='overlay'&&<section aria-label="Page labels">
+      <div className="option-row"><label htmlFor="overlay-kind">Label type</label><select id="overlay-kind" value={overlay.kind} onChange={event=>{
+       resetOutput();const kind=event.target.value as OverlayOptions['kind'];
+       setOverlay(current=>({...current,kind,text:kind==='numbers'?'Page {number}':kind==='watermark'?'DRAFT':'{page} / {pages}',size:kind==='watermark'?36:12,opacity:kind==='watermark'?0.25:1,angle:0,x:50,y:kind==='header'?5:kind==='watermark'?50:95}));
+      }}><option value="watermark">Text watermark</option><option value="numbers">Page numbers</option><option value="header">Header</option><option value="footer">Footer</option></select></div>
+      <div className="option-row"><label htmlFor="overlay-text">Label text</label><input id="overlay-text" maxLength={200} value={overlay.text} onChange={e=>{resetOutput();setOverlay(current=>({...current,text:e.target.value}));}}/></div>
+      <p className="inline-help">Use {'{page}'} for the source page, {'{pages}'} for total pages, {'{number}'} for sequential numbering of selected pages, or {'{date}'} for today’s UTC date. Text supports Western European characters.</p>
+      <div className="option-row"><label htmlFor="overlay-range">Pages to label</label><input id="overlay-range" placeholder="All pages" value={overlay.range} onChange={e=>{resetOutput();setOverlay(current=>({...current,range:e.target.value}));}}/></div>
+      {([['size','Font size',6,144,1],['opacity','Opacity',0.05,1,0.05],['angle','Rotation (degrees)',-180,180,1],['start','Starting number',0,100000,1],['x','Horizontal position (%)',0,100,1],['y','Vertical position (%)',0,100,1]] as const).map(([key,label,min,max,step])=><div className="option-row" key={key}><label htmlFor={'overlay-'+key}>{label}</label><input id={'overlay-'+key} type="number" min={min} max={max} step={step} value={overlay[key]} onChange={e=>{resetOutput();setOverlay(current=>({...current,[key]:Number(e.target.value)}));}}/></div>)}
+      {outputUrl&&<CropPreview file={outputUrl} range={overlay.range}/>}
+     </section>}
      {activeTool==='resize'&&<section aria-label="Resize settings">
       <div className="option-row"><label htmlFor="sheet-size">Sheet size</label><select id="sheet-size" value={size} onChange={e=>{resetOutput();setSize(e.target.value as typeof size);}}>
        {Object.entries(paperSizes).map(([name,[w,h]])=><option key={name} value={name}>{name} ({w} × {h} mm)</option>)}<option value="custom">Custom dimensions</option>

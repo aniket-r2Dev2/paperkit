@@ -51,7 +51,7 @@ export default function CropPreview({ file, range, margins }: { file: File | str
   }, [file, range]);
   const valid = !margins || Object.values(margins).every(value => Number.isFinite(value) && value >= 0) &&
     margins.left + margins.right < 100 && margins.top + margins.bottom < 100;
-  const label = margins ? 'Crop preview' : 'Resized result';
+  const label = margins ? 'Crop preview' : 'Result preview';
   return <section aria-label={label} className="pdf-preview">
     <p>{!valid ? 'Margins must leave some of the page visible.' : pageNumber ? label + ' · page ' + pageNumber + (margins ? ' · outlined area will remain visible' : '') : message}</p>
     <div className="crop-sheet" hidden={!pageNumber || !valid}>
