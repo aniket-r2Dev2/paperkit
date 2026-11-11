@@ -49,7 +49,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [x] Add page numbers
 - [ ] Bates numbering
 - [x] Text watermarks
-- [ ] Edit metadata
+- [x] Edit document properties for PDFs without XMP metadata
 - [ ] Flatten form fields/annotations
 
 ## Compress, scan and security
@@ -85,7 +85,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Grayscale
 - [ ] Header/footer
 - [ ] Create/edit bookmarks
-- [ ] Edit metadata
+- [x] Edit document properties for PDFs without XMP metadata
 - [ ] Remove annotations
 - [ ] Repair
 - [ ] Batch operations
