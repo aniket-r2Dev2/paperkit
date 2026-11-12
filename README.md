@@ -103,3 +103,7 @@ Choose one PDF and type, draw, or upload a PNG/JPEG signature. Select a page and
 ## Watermark and page labels
 
 Choose a watermark, page number, header or footer. Enter one line of text and optionally use {page}, {pages}, {number}, or {date}. Source page numbers follow the PDF, sequential numbers follow selected pages starting at your chosen value, and dates use UTC. Leave the range empty for all pages. Configure font size, opacity, angle and position. Labels remain selectable text, use Helvetica's Western European character set, and must fit within each visible page. The result preview shows the first selected page after processing. Files stay local.
+
+## Edit PDF properties
+
+Load one PDF to view and edit its title, author, subject and keywords. Unicode values up to 2,000 characters are supported. Empty values clear a property. Saved properties are reread from the output before offering a download. PDFs containing a separate XMP metadata stream are displayed without editing, to avoid conflicting metadata. This edits document properties only and does not remove hidden document content. Clear all or switch tools to discard entered values.
