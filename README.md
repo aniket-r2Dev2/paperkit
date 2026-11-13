@@ -107,3 +107,7 @@ Choose a watermark, page number, header or footer. Enter one line of text and op
 ## Edit PDF properties
 
 Load one PDF to view and edit its title, author, subject and keywords. Unicode values up to 2,000 characters are supported. Empty values clear a property. Saved properties are reread from the output before offering a download. PDFs containing a separate XMP metadata stream are displayed without editing, to avoid conflicting metadata. This edits document properties only and does not remove hidden document content. Clear all or switch tools to discard entered values.
+
+## Create PDF bookmarks
+
+Choose one PDF, enter bookmark titles and destination page numbers, and use Up/Down to arrange the list. Save to preview verified titles and destinations, then download. Supports a flat list of up to 500 bookmarks, Unicode titles up to 200 characters, and PDFs with up to 500 pages. Existing bookmarks (including nested outlines) are replaced only after you check the replacement option. Editing existing outlines and nested bookmark creation are not supported. Processing stays local; Clear all or switching tools discards entries and releases downloads.
