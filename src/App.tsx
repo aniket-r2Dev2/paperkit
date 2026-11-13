@@ -1,3 +1,4 @@
+import PdfBookmarks from './components/PdfBookmarks';
 import PdfMetadata from './components/PdfMetadata';
 import type { OverlayOptions } from './utils/pageOverlay';
 import SignPdf from './components/SignPdf';
@@ -19,7 +20,7 @@ import { mergeFilesInOrder } from './utils/mergePdfFiles';
 import { revokeObjectUrls } from './utils/objectUrl';
 import { assertProcessingActive, createProcessingDeadline, RESOURCE_LIMITS, validateIncomingFiles, validateOutputSize, validatePageCount } from './utils/resourceLimits';
 
-type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress' | 'pdf-text' | 'crop' | 'resize' | 'forms' | 'sign' | 'overlay' | 'metadata';
+type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress' | 'pdf-text' | 'crop' | 'resize' | 'forms' | 'sign' | 'overlay' | 'metadata' | 'bookmarks';
 const tools = [
  {key:'merge' as const,label:'Merge PDF',description:'Combine PDFs and images in the order you choose.',icon:Files,tag:'Popular'},
  {key:'rotate' as const,label:'Rotate pages',description:'Turn pages the right way up.',icon:RotateCw},
@@ -29,6 +30,7 @@ const tools = [
  {key:'reorder' as const,label:'Reorder pages',description:'Drag pages into the order you want.',icon:ArrowUpDown},
  {key:'images' as const,label:'Images to PDF',description:'Turn JPG or PNG images into a PDF.',icon:FileImage},
  {key:'pdf-images' as const,label:'PDF to Images',description:'Export PDF pages as PNG or JPEG images.',icon:FileImage},
+ {key:'bookmarks' as const,label:'Create PDF bookmarks',description:'Add and reorder navigation to important pages.',icon:FileText},
  {key:'metadata' as const,label:'Edit PDF properties',description:'View and edit title, author, subject and keywords.',icon:FileText},
  {key:'overlay' as const,label:'Watermark & page labels',description:'Add watermarks, numbering, headers and footers.',icon:FileText},
  {key:'sign' as const,label:'Sign PDF',description:'Type, draw or upload and place a signature.',icon:FileText},
@@ -273,64 +275,7 @@ export default function App() {
      outputBytes=await reordered.save();checkActive();name='paperkit-reordered.pdf';
     }else{
      if(pdfFiles.length!==1)throw new Error(activeTool==='delete'?'Delete pages from one PDF at a time for now.':'Extract pages from one PDF at a time for now.');
-     const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());checkActive();const pageLimitError=validatePageCount(source.getPageCount());if(pageLimitError)throw new Error(pageLimitError);const indices=parsePageRange(pageRange,source.getPageCount());
-     if(!indices.length)throw new Error('Enter valid page numbers or ranges, e.g. 1-3, 5.');
-     if(activeTool==='delete'){
-      if(indices.length>=source.getPageCount())throw new Error('Keep at least one page in the PDF. Choose fewer pages to delete.');
-      [...indices].sort((a,b)=>b-a).forEach(index=>source.removePage(index));
-      outputBytes=await source.save();checkActive();name='paperkit-pages-removed.pdf';
-     }else{
-      const extracted=await PDFDocument.create();const pages=await extracted.copyPages(source,indices);pages.forEach(page=>extracted.addPage(page));
-      outputBytes=await extracted.save();checkActive();name='paperkit-pages.pdf';
-     }
-    }
-   }
-   checkActive();const outputLimitError=validateOutputSize(outputBytes.byteLength);if(outputLimitError)throw new Error(outputLimitError);
-   const outputObjectUrl=URL.createObjectURL(new Blob([outputBytes as BlobPart],{type:'application/pdf'}));createdObjectUrls.push(outputObjectUrl);setOutputUrl(outputObjectUrl);setOutputName(name);setStatus('done');
-  }catch(e){revokeObjectUrls(createdObjectUrls);if(processingControllerRef.current!==controller)return;setError(e instanceof DOMException&&e.name==='AbortError'?'Processing was cancelled.':e instanceof Error?e.message:'We could not process that file. Try another PDF.');setStatus('error');
-  }finally{if(processingControllerRef.current===controller)processingControllerRef.current=null;}
- };
- const cancelProcessing=()=>{processingControllerRef.current?.abort();};
- const clearSession=()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setFiles([]);setOutputUrl('');setZipUrl('');setSplitOutputs([]);setCompressionSummary(null);setOutputName('paperkit-output.pdf');setError('');setStatus('idle');setPageRange('1');setTextRange('');setOverlay({kind:'watermark',text:'DRAFT',range:'',size:36,opacity:0.25,angle:0,start:1,x:50,y:50});setCropRange('');setResizeRange('');setSize('A4');setCustomWidth('210');setCustomHeight('297');setMargins(initialMargins);if(inputRef.current)inputRef.current.value='';};
- const activeToolInfo=tools.find(tool=>tool.key===activeTool)!;const ActiveIcon=activeToolInfo.icon;
- return <div className="app-shell">
-  <header className="topbar">
-   <a className="brand" href="#" aria-label="PaperKit home" onClick={event=>{event.preventDefault();clearSession();}}><span className="brand-mark"><FileText size={20} strokeWidth={2.3}/></span><span>paperkit</span></a>
-   <nav className={mobileMenuOpen?'main-nav is-open':'main-nav'} aria-label="Main navigation"><a href="#tools" onClick={()=>setMobileMenuOpen(false)}>All tools <ChevronDown size={14}/></a><a href="#how-it-works" onClick={()=>setMobileMenuOpen(false)}>How it works</a><a href="https://github.com/aniket-r2Dev2/paperkit" target="_blank" rel="noreferrer">Open source <ArrowRight size={14}/></a></nav>
-   <div className="topbar-right"><span className="privacy-chip"><LockKeyhole size={13}/> No account needed</span><button className="icon-button menu-toggle" aria-label="Toggle navigation" onClick={()=>setMobileMenuOpen(open=>!open)}><Menu size={19}/></button></div>
-  </header>
-  <main>
-   <section className="hero"><div className="hero-eyebrow"><span className="eyebrow-dot"/> A simpler way to work with PDFs</div><h1>Your PDF tasks,<br/><span>without the clutter.</span></h1><p>Useful tools for your documents. No account, no file library.<br className="desktop-break"/> Just upload, get it done, and download.</p><button className="primary-button hero-cta" onClick={()=>inputRef.current?.click()}><UploadCloud size={18}/> Choose a PDF <ArrowRight size={16}/></button><div className="hero-note"><ShieldCheck size={15}/> The starter tools run locally in your browser. Files aren't uploaded to a PaperKit server.</div></section>
-   <section className="workspace" aria-label="PDF workspace">
-    <div className="workspace-header"><div><p className="section-kicker">YOUR WORKSPACE</p><h2>What would you like to do?</h2><p className="workspace-subtitle">Choose a tool, add your files, and download the result.</p></div><div className="privacy-note"><LockKeyhole size={16}/><span>Private by default</span></div></div>
-    <div className="tool-grid" id="tools">{tools.map(tool=>{const Icon=tool.icon;return <button key={tool.key} className={activeTool===tool.key?'tool-card selected':'tool-card'} onClick={()=>{setActiveTool(tool.key);resetOutput();setError('');}}><span className="tool-icon"><Icon size={18}/></span><span className="tool-copy"><span className="tool-title">{tool.label}{tool.tag&&<span className="tool-tag">{tool.tag}</span>}</span><span className="tool-description">{tool.description}</span></span><ArrowRight className="tool-arrow" size={16}/></button>;})}</div>
-    <div className="work-panel" id="upload-panel">
-     <div className="work-panel-heading"><div className="active-tool-icon"><ActiveIcon size={19}/></div><div><h3>{activeToolInfo.label}</h3><p>{activeToolInfo.description}</p></div></div>
-     <div className={dragging?'dropzone is-dragging':'dropzone'} role="button" tabIndex={0} onClick={()=>inputRef.current?.click()} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();inputRef.current?.click();}}} onDragOver={event=>{event.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)} onDrop={event=>{event.preventDefault();setDragging(false);addFiles(event.dataTransfer.files);}}>
-      <div className="upload-icon"><FileUp size={24}/></div><p className="drop-title">Drop your files here, or <span>browse</span></p><p className="drop-subtitle">PDF, PNG or JPG/JPEG · 50 MB per file · 200 MB total · 20 files max</p><input ref={inputRef} hidden type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" multiple onChange={event=>{if(event.target.files)addFiles(event.target.files);event.target.value='';}}/>
-     </div>
-     {files.length > 0 && (
-      <div className="file-list">
-       <div className="file-list-heading"><span>{files.length} file{files.length === 1 ? '' : 's'} added</span><button className="text-button" onClick={clearSession}>Clear all</button></div>
-       {activeTool==='merge'&&<p className="inline-help">Files merge from top to bottom. Use the arrows to change their order; each image becomes one PDF page.</p>}
-       {files.map((file, index) => (
-        <div className="file-row" key={file.name + file.size + index}>
-         <div className="file-type-icon">{/\.(png|jpe?g)$/i.test(file.name)?<FileImage size={18}/>:<FileText size={18}/>}</div>
-         <div className="file-meta"><strong>{file.name}</strong><span>{formatBytes(file.size)}</span></div>
-         {activeTool==='merge'&&<><button className="icon-button" aria-label={'Move file '+(index+1)+' up: '+file.name} disabled={index===0} onClick={()=>moveFile(index,-1)}><ArrowUp size={17}/></button><button className="icon-button" aria-label={'Move file '+(index+1)+' down: '+file.name} disabled={index===files.length-1} onClick={()=>moveFile(index,1)}><ArrowDown size={17}/></button></>}
-         <button className="icon-button remove-file" aria-label={'Remove ' + file.name} onClick={() => removeFile(index)}><X size={17}/></button>
-        </div>
-       ))}
-      </div>
-     )}
-     {activeTool !== 'resize' && activeTool !== 'crop' && activeTool !== 'images' && files.some(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) && (
-      activeTool==='reorder' ? <PageReorder file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} order={pageOrder} onOrderChange={setPageOrder}/> : <PdfPreview file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} />
-     )}
-     {activeTool==='split'&&<div className="option-row"><label htmlFor="split-mode">Split mode</label><select id="split-mode" value={splitMode} onChange={event=>{setSplitMode(event.target.value as 'every'|'ranges');resetOutput();}}><option value="every">Every page into its own PDF</option><option value="ranges">Custom page ranges</option></select><span className="field-help">Up to {MAX_SPLIT_OUTPUTS} output PDFs per operation.</span></div>}
-     {activeTool==='split'&&splitMode==='ranges'&&<div className="option-row"><label htmlFor="split-ranges">Page ranges</label><input id="split-ranges" value={splitRangeInput} onChange={event=>{setSplitRangeInput(event.target.value);resetOutput();}} placeholder="e.g. 1-3, 5, 8-10"/><span className="field-help">Each comma-separated range creates its own PDF. Ranges must not overlap.</span></div>}
-     {activeTool==='compress'&&<div className="option-row"><label htmlFor="compression-preset">Compression preset</label><select id="compression-preset" value={compressionPreset} onChange={event=>{resetOutput();setCompressionPreset(event.target.value as CompressionPreset);}}><option value="lossless">Preserve quality — structural rewrite</option><option value="balanced">Balanced — 144 DPI, JPEG 76%</option><option value="small">Small file — 96 DPI, JPEG 55%</option></select><span className="field-help">{COMPRESSION_PRESETS[compressionPreset].explanation}</span></div>}
-     {activeTool==='compress'&&compressionPreset!=='lossless'&&<p className="inline-help" role="note"><FileWarning size={15}/> This preset flattens pages into images. Searchable/selectable text, links, forms, accessibility metadata and digital signatures will not survive if a smaller rasterized copy is produced. Use Preserve quality for important editable documents.</p>}
-     {activeTool==='pdf-images'&&<div className="option-row"><label htmlFor="image-format">Image format</label><select id="image-format" value={imageFormat} onChange={event=>{resetOutput();setImageFormat(event.target.value as ImageFormat);}}><option value="png">PNG — lossless</option><option value="jpeg">JPEG — smaller files</option></select></div>}
+     const source=await PDFDocument.load(await pdfFiles[0].arrayBuffer());checkActive();const pageLimitError=validatePageCount(source.getPageCount());if(pageLimitError)throw new Error(…2492 tokens truncated…onChange={event=>{resetOutput();setImageFormat(event.target.value as ImageFormat);}}><option value="png">PNG — lossless</option><option value="jpeg">JPEG — smaller files</option></select></div>}
      {activeTool==='pdf-images'&&<div className="option-row"><label htmlFor="image-dpi">Resolution</label><select id="image-dpi" value={imageDpi} onChange={event=>{resetOutput();setImageDpi(Number(event.target.value) as Resolution);}}><option value="72">72 DPI — small</option><option value="150">150 DPI — standard</option><option value="200">200 DPI — sharp</option><option value="300">300 DPI — high resolution</option></select></div>}
      {activeTool==='pdf-images'&&<div className="option-row"><label htmlFor="image-pages">Pages to export</label><select id="image-pages" value={imageSelection} onChange={event=>{resetOutput();setImageSelection(event.target.value as 'all'|'selected');}}><option value="all">All pages (up to 100)</option><option value="selected">Selected pages</option></select></div>}
      {activeTool==='pdf-images'&&imageSelection==='selected'&&<div className="option-row"><label htmlFor="image-page-range">Page numbers or ranges</label><input id="image-page-range" value={imageRange} onChange={event=>{resetOutput();setImageRange(event.target.value);}} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Up to 100 pages, without duplicate outputs.</span></div>}
@@ -372,9 +317,10 @@ export default function App() {
      {status==='done'&&(outputUrl||splitOutputs.length>0)&&<div className="alert alert-success" role="status"><Check size={18}/><span>{activeTool==='pdf-images'?`${splitOutputs.length||1} image${(splitOutputs.length||1)===1?' is':'s are'} ready to download.`:splitOutputs.length>0?`Split complete: ${splitOutputs.length} PDFs are ready to download.`:activeTool==='pdf-text'?'Your text file is ready to download.':'Your PDF is ready to download.'}</span></div>}
      {activeTool==='compress'&&compressionSummary&&status==='done'&&<p className="inline-help" data-testid="compression-summary">Original: {formatBytes(compressionSummary.originalBytes)} · Result: {formatBytes(compressionSummary.outputBytes)} · Reduced by {compressionSummary.savingsPercent.toFixed(1)}% ({formatBytes(compressionSummary.savedBytes)} saved). {compressionSummary.usedOriginal?'This PDF could not be reduced with the selected preset; the original file was retained.':compressionPreset==='lossless'?'PDF structure was rewritten without rasterizing pages.':'Compressed pages have been flattened to JPEG images; text and form interactivity are not preserved.'}</p>}
      {activeTool==='sign'&&(files.length===1?<SignPdf key={files[0].name+files[0].size+files[0].lastModified} file={files[0]}/>:<p>Choose one PDF to sign.</p>)}
+     {activeTool==='bookmarks'&&(files.length===1?<PdfBookmarks key={files[0].name+files[0].size+files[0].lastModified} file={files[0]}/>:<p>Choose one PDF to add bookmarks.</p>)}
      {activeTool==='metadata'&&(files.length===1?<PdfMetadata key={files[0].name+files[0].size+files[0].lastModified} file={files[0]}/>:<p>Choose one PDF to edit its properties.</p>)}
      {activeTool==='forms'&&(files.length===1?<FillForm key={files[0].name+files[0].size+files[0].lastModified} file={files[0]}/>:<p>Choose one PDF with existing form fields.</p>)}
-     {activeTool!=='forms'&&activeTool!=='sign'&&activeTool!=='metadata'&&<div className="work-actions"><p className="local-badge"><ShieldCheck size={15}/> Processing stays on this device</p>{status==='done'&&(outputUrl||splitOutputs.length>0)?(splitOutputs.length>0?<div className="split-downloads">{zipUrl&&<a className="primary-button process-button" href={zipUrl} download={zipName}><ArrowDownToLine size={18}/> Download all as ZIP</a>}{splitOutputs.map(output=><a key={output.name} className="primary-button process-button" href={output.url} download={output.name}><ArrowDownToLine size={18}/> {output.name}</a>)}</div>:<a className="primary-button process-button" href={outputUrl} download={outputName}><ArrowDownToLine size={18}/> {activeTool==='pdf-images'?'Download image':activeTool==='pdf-text'?'Download text':'Download PDF'}</a>):<button className="primary-button process-button" onClick={processFiles} disabled={status==='processing'||files.length===0}>{status==='processing'?<span className="spinner"/>:<Sparkles size={17}/>} {status==='processing'?'Working…':'Process PDF'} <ArrowRight size={16}/></button>}{status==='processing'&&<button className="text-button" onClick={cancelProcessing}>Cancel processing</button>}</div>}
+     {activeTool!=='forms'&&activeTool!=='sign'&&activeTool!=='metadata'&&activeTool!=='bookmarks'&&<div className="work-actions"><p className="local-badge"><ShieldCheck size={15}/> Processing stays on this device</p>{status==='done'&&(outputUrl||splitOutputs.length>0)?(splitOutputs.length>0?<div className="split-downloads">{zipUrl&&<a className="primary-button process-button" href={zipUrl} download={zipName}><ArrowDownToLine size={18}/> Download all as ZIP</a>}{splitOutputs.map(output=><a key={output.name} className="primary-button process-button" href={output.url} download={output.name}><ArrowDownToLine size={18}/> {output.name}</a>)}</div>:<a className="primary-button process-button" href={outputUrl} download={outputName}><ArrowDownToLine size={18}/> {activeTool==='pdf-images'?'Download image':activeTool==='pdf-text'?'Download text':'Download PDF'}</a>):<button className="primary-button process-button" onClick={processFiles} disabled={status==='processing'||files.length===0}>{status==='processing'?<span className="spinner"/>:<Sparkles size={17}/>} {status==='processing'?'Working…':'Process PDF'} <ArrowRight size={16}/></button>}{status==='processing'&&<button className="text-button" onClick={cancelProcessing}>Cancel processing</button>}</div>}
      {status==='done'&&<button className="start-over" onClick={clearSession}>Done? Clear this session <Trash2 size={14}/></button>}
     </div>
    </section>
