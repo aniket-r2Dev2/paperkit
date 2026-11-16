@@ -33,3 +33,5 @@
 .crop-sheet { position: relative; width: fit-content; max-width: 100%; overflow: hidden; }
 .crop-sheet canvas { display: block; max-width: 100%; height: auto; }
 .crop-outline { position: absolute; border: 2px solid #096ac6; box-shadow: 0 0 0 100vmax #18273580; pointer-events: none; }
+
+.bookmark-row label{display:flex;flex-direction:column;gap:6px;max-width:100%}.bookmark-row input{max-width:100%;box-sizing:border-box}.bookmark-row input[type=number]{width:100px}.bookmark-row button:disabled{opacity:.4;cursor:default}

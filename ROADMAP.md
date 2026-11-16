@@ -41,7 +41,7 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [x] PDF-to-images (PNG/JPEG, page selection, DPI, ZIP downloads)
 - [x] PDF-to-text for documents with a text layer
 - [x] Edit basic document properties (title, author, subject and keywords)
-- [ ] Create bookmarks
+- [x] Create and reorder flat bookmarks with verified page destinations
 
 ## Milestone 3 — Editing, scans and advanced organization (P2)
 - [ ] Add text/image overlays, annotations and links

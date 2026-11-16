@@ -84,7 +84,8 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] N-up / multiple pages per sheet
 - [ ] Grayscale
 - [ ] Header/footer
-- [ ] Create/edit bookmarks
+- [x] Create and reorder flat bookmarks (explicit replacement of existing outlines)
+- [ ] Edit existing/nested bookmarks
 - [x] Edit document properties for PDFs without XMP metadata
 - [ ] Remove annotations
 - [ ] Repair
