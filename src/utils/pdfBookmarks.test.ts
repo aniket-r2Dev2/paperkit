@@ -33,3 +33,19 @@ describe('PDF bookmarks', () => {
     expect(replaced.get(PDFName.of('First'))).toEqual(replaced.get(PDFName.of('Last')));
   });
 });
+
+it('writes parent and sibling links with descendant counts for nested outlines', async () => {
+  const pdf = await PDFDocument.create(); pdf.addPage();
+  writeBookmarks(pdf, [{ title: 'Parent', page: 1 }, { title: 'Child', page: 1, depth: 1 }, { title: 'Grandchild', page: 1, depth: 2 }, { title: 'Sibling', page: 1, depth: 1 }, { title: 'Next', page: 1 }]);
+  const output = await PDFDocument.load(await pdf.save());
+  const root = output.catalog.lookup(PDFName.of('Outlines'), PDFDict);
+  const parent = root.lookup(PDFName.of('First'), PDFDict);
+  const child = parent.lookup(PDFName.of('First'), PDFDict);
+  const grandchild = child.lookup(PDFName.of('First'), PDFDict);
+  expect(root.get(PDFName.of('Count'))?.toString()).toBe('5');
+  expect(parent.get(PDFName.of('Count'))?.toString()).toBe('3');
+  expect(child.get(PDFName.of('Count'))?.toString()).toBe('1');
+  expect(child.get(PDFName.of('Parent'))).toEqual(root.get(PDFName.of('First')));
+  expect(grandchild.get(PDFName.of('Parent'))).toEqual(parent.get(PDFName.of('First')));
+  expect(child.lookup(PDFName.of('Next'), PDFDict).lookup(PDFName.of('Title'), PDFHexString).decodeText()).toBe('Sibling');
+});
