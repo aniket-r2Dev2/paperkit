@@ -12,7 +12,7 @@ async function source(existing = false) {
 
 test('create, reorder, validate, download and discard bookmarks', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: /Create PDF bookmarks/ }).click();
+  await page.getByRole('button', { name: /Edit PDF bookmarks/ }).click();
   await page.locator('input[type=file]').setInputFiles(await source());
   await page.getByLabel('Bookmark 1 title', { exact: true }).fill('नमस्ते');
   await page.getByLabel('Bookmark 1 page', { exact: true }).fill('3');
@@ -42,17 +42,17 @@ test('create, reorder, validate, download and discard bookmarks', async ({ page 
 
 test('existing bookmarks require explicit replacement and switching tools revokes output', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: /Create PDF bookmarks/ }).click();
+  await page.getByRole('button', { name: /Edit PDF bookmarks/ }).click();
   await page.locator('input[type=file]').setInputFiles(await source(true));
   await page.getByLabel('Bookmark 1 title', { exact: true }).fill('Replacement');
   await expect(page.getByRole('button', { name: 'Save bookmarks', exact: true })).toBeDisabled();
-  await page.getByRole('checkbox', { name: /Replace all existing bookmarks/ }).check();
+  await page.getByRole('checkbox', { name: /Save changes to existing bookmarks/ }).check();
   await page.getByRole('button', { name: 'Save bookmarks', exact: true }).click();
   const link = page.getByRole('link', { name: 'Download bookmarked PDF' });
   await expect(link).toBeVisible();
   const url = await link.getAttribute('href');
   await page.getByRole('button', { name: /Edit PDF properties/ }).click();
   expect(await page.evaluate(async href => { try { await fetch(href!); return true; } catch { return false; } }, url)).toBe(false);
-  await page.getByRole('button', { name: /Create PDF bookmarks/ }).click();
-  await expect(page.getByLabel('Bookmark 1 title', { exact: true })).toHaveValue('');
+  await page.getByRole('button', { name: /Edit PDF bookmarks/ }).click();
+  await expect(page.getByLabel('Bookmark 1 title', { exact: true })).toHaveValue('Old navigation');
 });

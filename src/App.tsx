@@ -30,7 +30,7 @@ const tools = [
  {key:'reorder' as const,label:'Reorder pages',description:'Drag pages into the order you want.',icon:ArrowUpDown},
  {key:'images' as const,label:'Images to PDF',description:'Turn JPG or PNG images into a PDF.',icon:FileImage},
  {key:'pdf-images' as const,label:'PDF to Images',description:'Export PDF pages as PNG or JPEG images.',icon:FileImage},
- {key:'bookmarks' as const,label:'Create PDF bookmarks',description:'Add and reorder navigation to important pages.',icon:FileText},
+ {key:'bookmarks' as const,label:'Edit PDF bookmarks',description:'Create and edit nested navigation to important pages.',icon:FileText},
  {key:'metadata' as const,label:'Edit PDF properties',description:'View and edit title, author, subject and keywords.',icon:FileText},
  {key:'overlay' as const,label:'Watermark & page labels',description:'Add watermarks, numbering, headers and footers.',icon:FileText},
  {key:'sign' as const,label:'Sign PDF',description:'Type, draw or upload and place a signature.',icon:FileText},
