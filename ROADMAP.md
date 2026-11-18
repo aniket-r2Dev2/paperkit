@@ -19,10 +19,10 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [x] Revoke partially generated split outputs when processing fails
 - [ ] Add component-level lifecycle tests for success, failure, cancellation and teardown
 - [x] Unit-test URL revocation helper for duplicate URLs and empty cleanup
-- [x] PDF preview and page thumbnails (currently capped at the first 6 pages)
+- [x] Full-document PDF preview and selectable thumbnails (12 at a time, up to 500 pages)
 - [x] Merge multiple PDFs
 - [x] Merge PDFs, PNGs and JPEGs in upload order with up/down and removal controls
-- [x] Reorder pages, rotate all pages, delete page ranges and extract page ranges
+- [x] Visually reorder pages, rotate all or selected pages, delete and extract selected pages
 - [x] Split a PDF into one downloadable PDF per page
 - [x] Split using custom, non-overlapping page ranges and package multiple outputs as a ZIP (up to 100 outputs and 250 MB per archive)
 - [ ] Complete accessibility and error UX review

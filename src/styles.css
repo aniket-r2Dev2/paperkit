@@ -35,3 +35,6 @@
 .crop-outline { position: absolute; border: 2px solid #096ac6; box-shadow: 0 0 0 100vmax #18273580; pointer-events: none; }
 
 .bookmark-row label{display:flex;flex-direction:column;gap:6px;max-width:100%}.bookmark-row input{max-width:100%;box-sizing:border-box}.bookmark-row input[type=number]{width:100px}.bookmark-row button:disabled{opacity:.4;cursor:default}
+
+.organizer-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}.organizer-card{min-width:0;gap:8px}.thumbnail-button{border:2px solid transparent;background:#f8fafc;padding:4px;max-width:100%;cursor:pointer}.thumbnail-button[aria-pressed=true]{border-color:#0a66c2}.organizer-large{max-width:700px;margin:16px auto;text-align:center}.organizer-card .page-reorder-controls button{width:auto;padding:6px}.organizer-card input{width:auto}.organizer-card label{font-size:12px}
+.pdf-preview>.option-row button{border:1px solid #c7d9eb;border-radius:7px;background:#fff;color:#225887;font:inherit;font-weight:600;padding:8px 10px;cursor:pointer}.pdf-preview>.option-row button:disabled{opacity:.45;cursor:default}.pdf-preview>.option-row button:hover:not(:disabled){background:#edf5ff}.pdf-preview>p{font-size:12px;color:#45586e}.pdf-preview button:focus-visible{outline:2px solid #0a66c2;outline-offset:3px}.organizer-grid{margin-top:12px}
