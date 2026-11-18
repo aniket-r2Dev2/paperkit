@@ -69,6 +69,9 @@ export default function App() {
  const [compressionSummary,setCompressionSummary]=useState<Omit<CompressionOutcome,'bytes'>|null>(null);
  const [pageOrder,setPageOrder]=useState<number[]>([]);
  const [rotation,setRotation]=useState('90');
+ const [rotationRange,setRotationRange]=useState('');
+ const [rotationScope,setRotationScope]=useState<'all'|'selected'>('all');
+ useEffect(()=>{setPageOrder([]);setPageRange('');setRotationRange('');setRotationScope('all');},[files]);
  const [outputUrl,setOutputUrl]=useState('');
  const [zipUrl,setZipUrl]=useState('');
  const [zipName,setZipName]=useState('paperkit-split.zip');
@@ -78,6 +81,7 @@ export default function App() {
  useEffect(() => () => { processingControllerRef.current?.abort(); }, []);
  useEffect(() => () => { revokeObjectUrls([outputUrl, zipUrl, ...splitOutputs.map(output=>output.url)].filter(Boolean)); }, [outputUrl,zipUrl,splitOutputs]);
  const resetOutput=useCallback(()=>{processingControllerRef.current?.abort();processingControllerRef.current=null;setOutputUrl('');setZipUrl('');setSplitOutputs([]);setCompressionSummary(null);setStatus('idle');setError('');},[]);
+ const onPageOrderChange=useCallback((order:number[])=>{resetOutput();setPageOrder(order);},[resetOutput]);
  const addFiles=(incoming:FileList|File[])=>{
   resetOutput();
   const accepted=Array.from(incoming);
@@ -262,7 +266,9 @@ export default function App() {
     }else if(activeTool==='rotate'){
      if(pdfFiles.length!==1)throw new Error('Rotate one PDF at a time for now.');
      const pdf=await PDFDocument.load(await pdfFiles[0].arrayBuffer());checkActive();const pageLimitError=validatePageCount(pdf.getPageCount());if(pageLimitError)throw new Error(pageLimitError);const turn=Number(rotation);
-     pdf.getPages().forEach(page=>page.setRotation(degrees((page.getRotation().angle+turn)%360)));
+     const selected=rotationScope==='all'?pdf.getPageIndices():parsePageRange(rotationRange,pdf.getPageCount());
+     if(!selected.length)throw new Error('Select at least one page to rotate.');
+     selected.forEach(index=>{const page=pdf.getPage(index);page.setRotation(degrees((page.getRotation().angle+turn)%360));});
      outputBytes=await pdf.save();checkActive();name='paperkit-rotated.pdf';
     }else if(activeTool==='reorder'){
      if(pdfFiles.length!==1)throw new Error('Reorder pages in one PDF at a time for now.');
@@ -326,7 +332,7 @@ export default function App() {
       </div>
      )}
      {activeTool !== 'resize' && activeTool !== 'crop' && activeTool !== 'images' && files.some(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) && (
-      activeTool==='reorder' ? <PageReorder file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} order={pageOrder} onOrderChange={setPageOrder}/> : <PdfPreview file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} />
+      activeTool==='reorder' ? <PageReorder file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} order={pageOrder} onOrderChange={onPageOrderChange}/> : <PdfPreview file={files.find(file => file.type === 'application/pdf' || /\.pdf$/i.test(file.name))!} range={activeTool==='rotate'?rotationRange:pageRange} onSelectionChange={['rotate','delete','extract'].includes(activeTool)?(range)=>{resetOutput();if(activeTool==='rotate'){setRotationScope('selected');setRotationRange(range);}else setPageRange(range);}:undefined} />
      )}
      {activeTool==='split'&&<div className="option-row"><label htmlFor="split-mode">Split mode</label><select id="split-mode" value={splitMode} onChange={event=>{setSplitMode(event.target.value as 'every'|'ranges');resetOutput();}}><option value="every">Every page into its own PDF</option><option value="ranges">Custom page ranges</option></select><span className="field-help">Up to {MAX_SPLIT_OUTPUTS} output PDFs per operation.</span></div>}
      {activeTool==='split'&&splitMode==='ranges'&&<div className="option-row"><label htmlFor="split-ranges">Page ranges</label><input id="split-ranges" value={splitRangeInput} onChange={event=>{setSplitRangeInput(event.target.value);resetOutput();}} placeholder="e.g. 1-3, 5, 8-10"/><span className="field-help">Each comma-separated range creates its own PDF. Ranges must not overlap.</span></div>}
@@ -367,8 +373,8 @@ export default function App() {
       {files.length===1&&<CropPreview file={files[0]} range={cropRange} margins={margins}/>}
      </section>}
      {activeTool==='pdf-text'&&<div className="option-row"><label htmlFor="text-pages">Pages to export</label><input id="text-pages" value={textRange} placeholder="All pages" onChange={event=>{resetOutput();setTextRange(event.target.value);}}/><span className="field-help">Leave blank for all pages or enter a range such as 2-3, 5. Image-only scans require OCR.</span></div>}
-     {activeTool==='rotate'&&<div className="option-row"><label htmlFor="rotation">Rotate pages by</label><select id="rotation" value={rotation} onChange={event=>setRotation(event.target.value)}><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">270° clockwise</option></select></div>}
-     {(activeTool==='extract'||activeTool==='delete')&&<div className="option-row"><label htmlFor="page-range">{activeTool==='delete'?'Pages to delete':'Pages to extract'}</label><input id="page-range" value={pageRange} onChange={event=>setPageRange(event.target.value)} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Page numbers start at 1.</span></div>}
+     {activeTool==='rotate'&&<div className="option-row"><label htmlFor="rotation-scope">Pages to rotate</label><select id="rotation-scope" value={rotationScope} onChange={event=>{resetOutput();setRotationScope(event.target.value as 'all'|'selected');}}><option value="all">All pages</option><option value="selected">Selected pages</option></select>{rotationScope==='selected'&&<><label htmlFor="rotation-range">Rotation page range</label><input id="rotation-range" value={rotationRange} onChange={event=>{resetOutput();setRotationRange(event.target.value);}} placeholder="e.g. 1-3, 8"/></>}<label htmlFor="rotation">Rotate pages by</label><select id="rotation" value={rotation} onChange={event=>{resetOutput();setRotation(event.target.value);}}><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">270° clockwise</option></select></div>}
+     {(activeTool==='extract'||activeTool==='delete')&&<div className="option-row"><label htmlFor="page-range">{activeTool==='delete'?'Pages to delete':'Pages to extract'}</label><input id="page-range" value={pageRange} onChange={event=>{resetOutput();setPageRange(event.target.value);}} placeholder="e.g. 1-3, 5, 8"/><span className="field-help">Page numbers start at 1.</span></div>}
      {activeTool==='images'&&<p className="inline-help"><FileImage size={15}/> Each image becomes one page; currently PNG and JPG/JPEG.</p>}
      {error&&<div className="alert alert-error" role="alert"><FileWarning size={17}/><span>{error}</span></div>}
      {status==='done'&&(outputUrl||splitOutputs.length>0)&&<div className="alert alert-success" role="status"><Check size={18}/><span>{activeTool==='pdf-images'?`${splitOutputs.length||1} image${(splitOutputs.length||1)===1?' is':'s are'} ready to download.`:splitOutputs.length>0?`Split complete: ${splitOutputs.length} PDFs are ready to download.`:activeTool==='pdf-text'?'Your text file is ready to download.':'Your PDF is ready to download.'}</span></div>}

@@ -8,7 +8,8 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [x] Drag-and-drop and file-picker upload
 - [ ] Searchable tool catalogue
 - [x] Basic file type/extension and per-file size validation
-- [ ] Validate PDF/image signatures and deeply malformed files before processing
+- [x] Check PDF/image signatures before processing
+- [ ] Comprehensive malformed-document validation
 - [x] Local browser processing and downloadable output for implemented tools
 - [ ] Complete cleanup verification for every success/failure/cancel path
 - [ ] Privacy-safe logging, rate limits, resource limits and abuse protection (no server processing today)
@@ -24,7 +25,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Visual combine/reorder across multiple PDFs in a single page organizer
 - [ ] Alternate & mix pages from multiple PDFs
 - [x] Rotate all pages in a PDF
-- [ ] Rotate selected pages only
+- [x] Rotate selected pages only
 - [x] Delete selected page ranges
 - [x] Extract selected page ranges
 - [x] Split into a separate PDF per page
@@ -33,12 +34,12 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Split by file size (best-effort with documented constraints)
 - [ ] Split by bookmarks
 - [ ] Split by text (needs text extraction/OCR fallback)
-- [ ] Create PDF bookmarks / outline
+- [x] Create and edit nested PDF bookmarks / outline
 - [ ] Rename output based on text (optional batch operation)
 
 ## Edit and sign
-- [x] PDF page preview and thumbnails (first 6 pages)
-- [ ] Selectable page thumbnails for targeted operations
+- [x] Full-document PDF page preview and paginated thumbnails (up to 500 pages)
+- [x] Selectable thumbnails for rotate, delete and extract
 - [ ] Add text and image overlays
 - [ ] Annotations, highlights, strike-through, shapes and links
 - [x] Fill existing AcroForm text, checkbox and radio fields with editable or flattened downloads
@@ -50,7 +51,8 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Bates numbering
 - [x] Text watermarks
 - [x] Edit document properties for PDFs without XMP metadata
-- [ ] Flatten form fields/annotations
+- [x] Flatten supported form fields within the form-filling tool
+- [ ] General annotation flattening
 
 ## Compress, scan and security
 - [x] Compression presets: preserve quality, balanced (144 DPI/JPEG 76%), small file (96 DPI/JPEG 55%), plus before/after size and honest no-growth fallback
@@ -83,7 +85,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Flip pages
 - [ ] N-up / multiple pages per sheet
 - [ ] Grayscale
-- [ ] Header/footer
+- [x] Header/footer
 - [x] Create, edit and reorder internal page bookmarks with up to 10 nested levels
 - [x] Edit document properties for PDFs without XMP metadata
 - [ ] Remove annotations

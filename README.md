@@ -113,3 +113,9 @@ Load one PDF to view and edit its title, author, subject and keywords. Unicode v
 Choose one PDF to load its existing internal page bookmarks, or start a new outline. Edit titles and destination pages; Up/Down moves entire branches among siblings, Indent nests a branch under the preceding sibling, and Outdent moves it after its parent. Remove branch also removes all its children. Supports 500 entries, 10 levels, and Unicode titles up to 200 characters. Internal named destinations are resolved to page numbers. Unsupported actions (such as web links), missing destinations, and oversized outlines disable editing instead of silently dropping entries.
 
 Saving rewrites destinations to fit-page view and expands the outline; existing zoom settings, styling, and collapsed states are not retained. Confirm this change before saving an existing outline. PDF.js independently verifies saved titles, hierarchy and destination pages before download. Processing stays local; Clear all or switching tools discards entries and releases downloads.
+
+## Visual page organizer
+
+Browse every page of a PDF (up to 500 pages) in batches of 12 thumbnails, jump to a page, and open a larger local preview. Thumbnail canvases have a maximum edge of 180 pixels; large previews are capped at 900 pixels. Only the current batch and optional large view are rendered. Preview tasks and canvases are released when navigating, replacing or clearing a document.
+
+Use page checkboxes or Select all/Clear selection with Rotate, Delete and Extract. The page-range field stays in sync with thumbnail selection. Rotation defaults to all pages; selecting thumbnails switches it to selected pages. Reorder supports drag/drop within the visible batch and Earlier/Later keyboard buttons across batches. Displayed positions show the export order. Invalid selections and attempts to delete every page are rejected.
