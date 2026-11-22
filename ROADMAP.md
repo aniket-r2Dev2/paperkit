@@ -36,7 +36,7 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [x] Compress PDF with structural (preserve quality) and raster (balanced/small) presets, with explicit flattening warnings, before/after sizes and no-growth fallback
 - [x] Fill existing text, checkbox and radio fields
 - [x] Add signatures with type, draw or upload and page placement
-- [ ] Protect PDF / unlock with supplied password and authorization
+- [x] Protect PDF / unlock with supplied password and authorization
 - [x] Images-to-PDF
 - [x] PDF-to-images (PNG/JPEG, page selection, DPI, ZIP downloads)
 - [x] PDF-to-text for documents with a text layer

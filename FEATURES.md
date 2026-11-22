@@ -59,8 +59,8 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [ ] Preserve searchable text, form fields and links while compressing embedded images (raster presets flatten pages)
 - [ ] Deskew scanned PDF pages
 - [ ] OCR scanned documents to searchable PDF/text
-- [ ] Protect/encrypt PDF with password
-- [ ] Unlock/remove password only where the user supplies a valid password and has authorization
+- [x] Protect/encrypt PDF with AES-256 password protection
+- [x] Unlock/remove password only where the user supplies a valid password and has authorization
 - [ ] Repair/rewrite damaged PDFs (best-effort)
 - [ ] Grayscale conversion
 - [ ] Remove/flatten annotations
