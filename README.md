@@ -119,3 +119,9 @@ Saving rewrites destinations to fit-page view and expands the outline; existing 
 Browse every page of a PDF (up to 500 pages) in batches of 12 thumbnails, jump to a page, and open a larger local preview. Thumbnail canvases have a maximum edge of 180 pixels; large previews are capped at 900 pixels. Only the current batch and optional large view are rendered. Preview tasks and canvases are released when navigating, replacing or clearing a document.
 
 Use page checkboxes or Select all/Clear selection with Rotate, Delete and Extract. The page-range field stays in sync with thumbnail selection. Rotation defaults to all pages; selecting thumbnails switches it to selected pages. Reorder supports drag/drop within the visible batch and Earlier/Later keyboard buttons across batches. Displayed positions show the export order. Invalid selections and attempts to delete every page are rejected.
+
+## Protect and unlock PDF
+
+Protect one unencrypted PDF with AES-256, or unlock an encrypted PDF with a valid user or owner password. Processing stays in a disposable browser worker; documents and passwords are never uploaded or saved. Password fields clear when processing begins. Keep the password safe: recovery is unavailable.
+
+Supports one PDF up to 50 MB and 500 pages, with a 120-second timeout and cancellation. New passwords need at least 8 characters and at most 127 UTF-8 bytes. Output encryption and page count are verified before download. Rewriting invalidates existing digital signatures. See [engine decisions and limitations](docs/pdf-security.md) and [third-party notices](public/licenses/README.md). This software is based in part on the work of the Independent JPEG Group.
