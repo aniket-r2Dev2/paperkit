@@ -40,7 +40,7 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 ## Edit and sign
 - [x] Full-document PDF page preview and paginated thumbnails (up to 500 pages)
 - [x] Selectable thumbnails for rotate, delete and extract
-- [ ] Add text and image overlays
+- [x] Add text and image overlays with page/position/size controls, remove, undo and exported preview
 - [ ] Annotations, highlights, strike-through, shapes and links
 - [x] Fill existing AcroForm text, checkbox and radio fields with editable or flattened downloads
 - [x] Add signature by draw/type/upload with position and size controls

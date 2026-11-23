@@ -44,7 +44,8 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [x] Create, edit and reorder nested bookmarks with verified page destinations
 
 ## Milestone 3 — Editing, scans and advanced organization (P2)
-- [ ] Add text/image overlays, annotations and links
+- [x] Add text/image overlays with position/size controls, undo and exported preview
+- [ ] Add annotations, highlights, shapes and links (remaining #37 scope)
 - [ ] Flatten forms/annotations; remove annotations
 - [ ] Alternate/mix and split-by-bookmarks
 - [ ] OCR and deskew with language-pack strategy
