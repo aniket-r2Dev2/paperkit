@@ -130,4 +130,10 @@ Supports one PDF up to 50 MB and 500 pages, with a 120-second timeout and cancel
 
 Add up to 50 text or PNG/JPEG overlays across a PDF. Set each overlay’s page, left/top position and width/height using keyboard-accessible percentage fields; remove overlays or undo the last 20 changes. Later overlays appear above earlier ones. Text is a single line of up to 200 Western European characters in Helvetica, automatically fitted to its box between 6 and 144 pt. Images retain their proportions within the chosen box, anchored at its lower-left, and are limited to 2 MB and 4 megapixels each.
 
-Preview edited PDF renders the actual exported file; edits revoke the prior download and discard that preview. Processing stays local. Clear all or switching tools releases the editing state and undo history. Supports unencrypted PDFs up to 50 MB and 500 pages. This adds permanent overlays; it does not edit or redact existing content and invalidates digital signatures. Annotations, shapes, highlights and links remain pending in #37.
+Preview edited PDF renders the actual exported file; edits revoke the prior download and discard that preview. Processing stays local. Clear all or switching tools releases the editing state and undo history. Supports unencrypted PDFs up to 50 MB and 500 pages. This adds permanent overlays; it does not edit or redact existing content and invalidates digital signatures. Editable PDF comments and links remain pending in #37.
+
+### Shapes and visual markup
+
+The text/image editor also adds rectangle and ellipse outlines, translucent highlights, and strike-through. Set the page and percentage box, color, opacity (0.05–1), and line thickness (0.5–12 pt). Highlights use multiply blending to preserve underlying dark text; strike-through crosses the center of its box. Outlines and strokes stay inside the box, including on rotated or cropped pages. All markups share the 50-object limit, undo, removal, preview and download cleanup.
+
+Markups are permanent page graphics, not editable PDF comments or automatic text-range annotations. Underlying text remains selectable; covering or striking through it does not redact it. Preview the exported result before downloading.

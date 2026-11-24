@@ -1,7 +1,9 @@
-import { PDFDocument, StandardFonts, degrees, type PDFPage } from 'pdf-lib';
+import { PDFDocument, StandardFonts, degrees, rgb, BlendMode, type PDFPage } from 'pdf-lib';
 import { validatePageCount, validateOutputSize } from './resourceLimits';
+export type MarkupKind = 'rectangle' | 'ellipse' | 'highlight' | 'strike';
+export type MarkupStyle = { kind: MarkupKind; color: string; opacity: number; thickness: number };
 export type EditorItem = { id: number; page: number; x: number; y: number; width: number; height: number } & (
-  { kind: 'text'; text: string } | { kind: 'image'; bytes: Uint8Array; format: 'png' | 'jpg' }
+  { kind: 'text'; text: string } | { kind: 'image'; bytes: Uint8Array; format: 'png' | 'jpg' } | MarkupStyle
 );
 export function placement(page: PDFPage, item: EditorItem) {
   const {x,y,width,height}=item;
@@ -37,13 +39,27 @@ export async function editPdf(source: Uint8Array, items: EditorItem[], active:()
       const descent=font.heightAtSize(size,{descender:true})-font.heightAtSize(size,{descender:false});
       const radians=box.rotate.angle*Math.PI/180;
       page.drawText(item.text,{x:box.x-descent*Math.sin(radians),y:box.y+descent*Math.cos(radians),font,size,rotate:box.rotate});
-    }else{
+    }else if(item.kind==='image'){
       if(!item.bytes.length||item.bytes.length>2*1024*1024)throw new Error('Each image must be 2 MB or smaller.');
       const image=item.format==='png'?await pdf.embedPng(item.bytes):await pdf.embedJpg(item.bytes);active();
       if(image.width*image.height>4_000_000)throw new Error('Each image must be 4 megapixels or smaller.');
       // Contain without stretching; anchor at the lower-left of the chosen box.
       const scale=Math.min(box.width/image.width,box.height/image.height);
       page.drawImage(image,{...box,width:image.width*scale,height:image.height*scale});
+    }else{
+      if(!/^#[0-9a-f]{6}$/i.test(item.color)||!Number.isFinite(item.opacity)||item.opacity<0.05||item.opacity>1||!Number.isFinite(item.thickness)||item.thickness<0.5||item.thickness>12)throw new Error('Choose a valid color, opacity from 0.05 to 1, and line thickness from 0.5 to 12 pt.');
+      const color=rgb(parseInt(item.color.slice(1,3),16)/255,parseInt(item.color.slice(3,5),16)/255,parseInt(item.color.slice(5,7),16)/255);
+      const radians=box.rotate.angle*Math.PI/180;
+      const point=(x:number,y:number)=>({x:box.x+x*Math.cos(radians)-y*Math.sin(radians),y:box.y+x*Math.sin(radians)+y*Math.cos(radians)});
+      if(item.kind==='highlight'){
+        page.drawRectangle({...box,color,opacity:item.opacity,borderWidth:0,blendMode:BlendMode.Multiply});
+      }else{
+        if(item.thickness>=Math.min(box.width,box.height))throw new Error('Enlarge the markup box or reduce line thickness.');
+        const inset=item.thickness/2;
+        if(item.kind==='strike')page.drawLine({start:point(inset,box.height/2),end:point(box.width-inset,box.height/2),thickness:item.thickness,color,opacity:item.opacity});
+        else if(item.kind==='rectangle')page.drawRectangle({...point(inset,inset),width:box.width-item.thickness,height:box.height-item.thickness,rotate:box.rotate,borderColor:color,borderWidth:item.thickness,borderOpacity:item.opacity});
+        else page.drawEllipse({...point(box.width/2,box.height/2),xScale:(box.width-item.thickness)/2,yScale:(box.height-item.thickness)/2,rotate:box.rotate,borderColor:color,borderWidth:item.thickness,borderOpacity:item.opacity});
+      }
     }
   }
   const bytes=await pdf.save();active();
