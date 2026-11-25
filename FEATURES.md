@@ -42,7 +42,8 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [x] Selectable thumbnails for rotate, delete and extract
 - [x] Add text and image overlays with page/position/size controls, remove, undo and exported preview
 - [x] Rectangle/ellipse outlines, highlights and strike-through as permanent page graphics
-- [ ] Editable PDF annotations/comments and links
+- [x] Add web and internal-page links; edit/remove/undo links created in the current session
+- [ ] Edit existing PDF links and editable annotations/comments
 - [x] Fill existing AcroForm text, checkbox and radio fields with editable or flattened downloads
 - [x] Add signature by draw/type/upload with position and size controls
 - [ ] Create fillable forms

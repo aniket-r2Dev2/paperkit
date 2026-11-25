@@ -46,7 +46,8 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 ## Milestone 3 — Editing, scans and advanced organization (P2)
 - [x] Add text/image overlays with position/size controls, undo and exported preview
 - [x] Add rectangle/ellipse outlines, highlights and strike-through with color, opacity and line controls
-- [ ] Add editable PDF annotations/comments and links (remaining #37 scope)
+- [x] Add HTTP/HTTPS and internal-page links with placement controls, undo and export
+- [ ] Edit existing links and editable PDF annotations/comments (remaining #37 scope)
 - [ ] Flatten forms/annotations; remove annotations
 - [ ] Alternate/mix and split-by-bookmarks
 - [ ] OCR and deskew with language-pack strategy

@@ -24,7 +24,7 @@ import { assertProcessingActive, createProcessingDeadline, RESOURCE_LIMITS, vali
 
 type ToolKey = 'merge' | 'rotate' | 'extract' | 'split' | 'delete' | 'reorder' | 'images' | 'pdf-images' | 'compress' | 'pdf-text' | 'crop' | 'resize' | 'forms' | 'sign' | 'overlay' | 'metadata' | 'bookmarks' | 'protect' | 'unlock' | 'editor';
 const tools = [
- {key:'editor' as const,label:'Add text & images',description:'Place text, images, shapes and highlights on PDF pages.',icon:FileText},
+ {key:'editor' as const,label:'Add text & images',description:'Place text, images, markup and links on PDF pages.',icon:FileText},
  {key:'protect' as const,label:'Protect PDF',description:'Add password protection to your PDF.',icon:LockKeyhole},
  {key:'unlock' as const,label:'Unlock PDF',description:'Remove encryption with the correct password.',icon:LockKeyhole},
  {key:'merge' as const,label:'Merge PDF',description:'Combine PDFs and images in the order you choose.',icon:Files,tag:'Popular'},

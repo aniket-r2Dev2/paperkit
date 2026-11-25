@@ -1,0 +1,21 @@
+import {test,expect} from '@playwright/test';
+import {PDFDocument,degrees} from 'pdf-lib';
+import {readFile} from 'node:fs/promises';
+import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+for(const angle of [0,90,180,270])test(`PDF links retain destinations and visual hit areas at rotation ${angle}`,async({page})=>{
+  const pdf=await PDFDocument.create();const sheet=pdf.addPage([400,600]);sheet.setCropBox(20,30,300,500);sheet.setRotation(degrees(angle));pdf.addPage();
+  await page.goto('/');await page.getByRole('button',{name:/^Add text & images/}).click();await page.locator('input[type=file]').first().setInputFiles({name:'links.pdf',mimeType:'application/pdf',buffer:Buffer.from(await pdf.save())});
+  await page.getByRole('button',{name:'Add web link',exact:true}).click();await page.getByLabel('Overlay 1 URL',{exact:true}).fill('https://example.com/first');
+  await page.getByRole('button',{name:'Add page link',exact:true}).click();await page.getByLabel('Overlay 2 destination',{exact:true}).fill('2');await page.getByLabel('Overlay 2 y',{exact:true}).fill('30');
+  await page.getByRole('button',{name:'Preview edited PDF',exact:true}).click();const link=page.getByRole('link',{name:'Download edited PDF',exact:true});await expect(link).toBeVisible();const stale=await link.getAttribute('href');
+  await page.getByLabel('Overlay 1 URL',{exact:true}).fill('https://example.com/final?q=1#section');await expect(link).toHaveCount(0);expect(await page.evaluate(async u=>{try{await fetch(u!);return false;}catch{return true;}},stale)).toBe(true);
+  await page.getByRole('button',{name:'Preview edited PDF',exact:true}).click();await expect(link).toBeVisible();const download=page.waitForEvent('download');await link.click();const bytes=await readFile((await(await download).path())!);
+  const task=pdfjs.getDocument({data:new Uint8Array(bytes),isEvalSupported:false});const doc=await task.promise;const p=await doc.getPage(1);const annotations=await p.getAnnotations();expect(annotations).toHaveLength(2);expect(annotations[0].url).toBe('https://example.com/final?q=1#section');expect(await doc.getPageIndex(annotations[1].dest[0])).toBe(1);
+  const viewport=p.getViewport({scale:1});const rect=viewport.convertToViewportRectangle(annotations[0].rect);const visual=[Math.min(rect[0],rect[2])/viewport.width,Math.min(rect[1],rect[3])/viewport.height,Math.max(rect[0],rect[2])/viewport.width,Math.max(rect[1],rect[3])/viewport.height];[0.1,0.1,0.5,0.2].forEach((v,i)=>expect(visual[i]).toBeCloseTo(v));await task.destroy();
+  await page.getByRole('button',{name:'Remove overlay 2',exact:true}).click();await page.getByRole('button',{name:'Undo last change',exact:true}).click();await expect(page.getByLabel('Overlay 2 destination',{exact:true})).toHaveValue('2');
+  await page.getByRole('button',{name:'Clear all',exact:true}).click();await expect(page.getByRole('region',{name:'Text and image editor'})).toHaveCount(0);
+});
+test('invalid URL and destination fail without download and link controls fit mobile',async({page})=>{
+  await page.setViewportSize({width:390,height:844});const pdf=await PDFDocument.create();pdf.addPage();await page.goto('/');await page.getByRole('button',{name:/^Add text & images/}).click();await page.locator('input[type=file]').first().setInputFiles({name:'links.pdf',mimeType:'application/pdf',buffer:Buffer.from(await pdf.save())});await page.getByRole('button',{name:'Add web link',exact:true}).click();await page.getByLabel('Overlay 1 URL',{exact:true}).fill('javascript:alert(1)');await page.getByRole('button',{name:'Preview edited PDF',exact:true}).click();await expect(page.getByRole('alert')).toContainText('HTTP');await expect(page.getByRole('link',{name:'Download edited PDF',exact:true})).toHaveCount(0);
+  await page.getByLabel('Overlay 1 URL',{exact:true}).fill('https://example.com');await page.getByRole('button',{name:'Add page link',exact:true}).click();await page.getByLabel('Overlay 2 destination',{exact:true}).fill('2');await page.getByRole('button',{name:'Preview edited PDF',exact:true}).click();await expect(page.getByRole('alert')).toContainText('destination');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});

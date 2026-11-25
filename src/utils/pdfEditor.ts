@@ -1,10 +1,23 @@
-import { PDFDocument, StandardFonts, degrees, rgb, BlendMode, type PDFPage } from 'pdf-lib';
+import { PDFDocument, StandardFonts, degrees, rgb, BlendMode, PDFString, PDFName, type PDFPage } from 'pdf-lib';
 import { validatePageCount, validateOutputSize } from './resourceLimits';
 export type MarkupKind = 'rectangle' | 'ellipse' | 'highlight' | 'strike';
 export type MarkupStyle = { kind: MarkupKind; color: string; opacity: number; thickness: number };
 export type EditorItem = { id: number; page: number; x: number; y: number; width: number; height: number } & (
-  { kind: 'text'; text: string } | { kind: 'image'; bytes: Uint8Array; format: 'png' | 'jpg' } | MarkupStyle
+  { kind: 'text'; text: string } | { kind: 'image'; bytes: Uint8Array; format: 'png' | 'jpg' } | MarkupStyle | { kind: 'web-link'; url: string } | { kind: 'page-link'; destination: number }
 );
+export function validateLinkUrl(value: string): string {
+  if(value.length>2048||/[\u0000-\u0020\u007f]/.test(value))throw new Error('Enter an HTTP or HTTPS URL without spaces, control characters or credentials (up to 2048 characters).');
+  let url:URL;
+  try{url=new URL(value);}catch{throw new Error('Enter a complete HTTP or HTTPS URL.');}
+  if(!['http:','https:'].includes(url.protocol)||!url.hostname||url.username||url.password)throw new Error('Use an HTTP or HTTPS URL without credentials.');
+  if(url.href.length>2048)throw new Error('The encoded URL is too long.');
+  return url.href;
+}
+export function linkRectangle(box:ReturnType<typeof placement>):number[]{
+  const angle=box.rotate.angle*Math.PI/180;
+  const corners=[[0,0],[box.width,0],[0,box.height],[box.width,box.height]].map(([x,y])=>[box.x+x*Math.cos(angle)-y*Math.sin(angle),box.y+x*Math.sin(angle)+y*Math.cos(angle)]);
+  return [Math.min(...corners.map(p=>p[0])),Math.min(...corners.map(p=>p[1])),Math.max(...corners.map(p=>p[0])),Math.max(...corners.map(p=>p[1]))];
+}
 export function placement(page: PDFPage, item: EditorItem) {
   const {x,y,width,height}=item;
   if (![x,y,width,height].every(Number.isFinite)||x<0||y<0||width<=0||height<=0||x+width>100||y+height>100) throw new Error('Keep each overlay inside the page, with a positive width and height.');
@@ -46,6 +59,19 @@ export async function editPdf(source: Uint8Array, items: EditorItem[], active:()
       // Contain without stretching; anchor at the lower-left of the chosen box.
       const scale=Math.min(box.width/image.width,box.height/image.height);
       page.drawImage(image,{...box,width:image.width*scale,height:image.height*scale});
+    }else if(item.kind==='web-link'||item.kind==='page-link'){
+      const annotation=pdf.context.obj({Type:'Annot',Subtype:'Link',Rect:linkRectangle(box),Border:[0,0,0],P:page.ref});
+      if(item.kind==='web-link')annotation.set(PDFName.of('A'),pdf.context.obj({S:'URI',URI:PDFString.of(validateLinkUrl(item.url))}));
+      else{
+        if(!Number.isInteger(item.destination)||item.destination<1||item.destination>count)throw new Error(`Choose a destination page from 1 to ${count}.`);
+        annotation.set(PDFName.of('Dest'),pdf.context.obj([pdf.getPage(item.destination-1).ref,'Fit']));
+      }
+      page.node.addAnnot(pdf.context.register(annotation));
+      // Render a thin blue frame in page content so the exact link area is visible
+      // in canvas-only previews and in the downloaded document.
+      const radians=box.rotate.angle*Math.PI/180;
+      const stroke=Math.min(1,box.width/4,box.height/4),inset=stroke/2;
+      page.drawRectangle({x:box.x+inset*Math.cos(radians)-inset*Math.sin(radians),y:box.y+inset*Math.sin(radians)+inset*Math.cos(radians),width:box.width-stroke,height:box.height-stroke,rotate:box.rotate,borderColor:rgb(0.04,0.4,0.76),borderWidth:stroke});
     }else{
       if(!/^#[0-9a-f]{6}$/i.test(item.color)||!Number.isFinite(item.opacity)||item.opacity<0.05||item.opacity>1||!Number.isFinite(item.thickness)||item.thickness<0.5||item.thickness>12)throw new Error('Choose a valid color, opacity from 0.05 to 1, and line thickness from 0.5 to 12 pt.');
       const color=rgb(parseInt(item.color.slice(1,3),16)/255,parseInt(item.color.slice(3,5),16)/255,parseInt(item.color.slice(5,7),16)/255);
