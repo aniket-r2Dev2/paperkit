@@ -1,9 +1,9 @@
-import { PDFDocument, StandardFonts, degrees, rgb, BlendMode, PDFString, PDFName, type PDFPage } from 'pdf-lib';
+import { PDFDocument, StandardFonts, degrees, rgb, BlendMode, PDFString, PDFHexString, PDFName, type PDFPage } from 'pdf-lib';
 import { validatePageCount, validateOutputSize } from './resourceLimits';
 export type MarkupKind = 'rectangle' | 'ellipse' | 'highlight' | 'strike';
 export type MarkupStyle = { kind: MarkupKind; color: string; opacity: number; thickness: number };
 export type EditorItem = { id: number; page: number; x: number; y: number; width: number; height: number } & (
-  { kind: 'text'; text: string } | { kind: 'image'; bytes: Uint8Array; format: 'png' | 'jpg' } | MarkupStyle | { kind: 'web-link'; url: string } | { kind: 'page-link'; destination: number }
+  { kind: 'text'; text: string } | { kind: 'image'; bytes: Uint8Array; format: 'png' | 'jpg' } | MarkupStyle | { kind: 'web-link'; url: string } | { kind: 'page-link'; destination: number } | { kind: 'comment'; text: string; author: string }
 );
 export function validateLinkUrl(value: string): string {
   if(value.length>2048||/[\u0000-\u0020\u007f]/.test(value))throw new Error('Enter an HTTP or HTTPS URL without spaces, control characters or credentials (up to 2048 characters).');
@@ -32,6 +32,11 @@ export function placement(page: PDFPage, item: EditorItem) {
   const [px,py]=origins[angle];
   return {x:left+w*px,y:bottom+h*py,width:(angle%180?h:w)*width/100,height:(angle%180?w:h)*height/100,rotate:degrees(angle)};
 }
+// Sticky-note icons have a fixed 22 pt footprint, independent of text length.
+export function commentPlacement(page: PDFPage, item: EditorItem) {
+  const visible=placement(page,{...item,x:0,y:0,width:100,height:100});
+  return placement(page,{...item,width:2200/visible.width,height:2200/visible.height});
+}
 export async function editPdf(source: Uint8Array, items: EditorItem[], active:()=>void=()=>{}) {
   if(!items.length||items.length>50)throw new Error('Add between 1 and 50 overlays.');
   const pdf=await PDFDocument.load(source,{updateMetadata:false});active();
@@ -40,8 +45,17 @@ export async function editPdf(source: Uint8Array, items: EditorItem[], active:()
   for(const item of items){
     active();
     if(!Number.isInteger(item.page)||item.page<1||item.page>count)throw new Error(`Choose a page from 1 to ${count}.`);
-    const page=pdf.getPage(item.page-1),box=placement(page,item);
-    if(item.kind==='text'){
+    const page=pdf.getPage(item.page-1),box=item.kind==='comment'?commentPlacement(page,item):placement(page,item);
+    if(item.kind==='comment'){
+      if(!item.text.trim()||item.text.length>2000||/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(item.text))throw new Error('Enter a comment of 1–2000 characters without control characters.');
+      if(item.author.length>100||/[\u0000-\u001f\u007f]/.test(item.author))throw new Error('Author must be one line of up to 100 characters.');
+      // Real Text annotations remain editable in supporting PDF viewers. No page
+      // content is drawn, and existing annotations are retained unchanged.
+      const annotation=pdf.context.obj({Type:'Annot',Subtype:'Text',Rect:linkRectangle(box),
+        Contents:PDFHexString.fromText(item.text),T:PDFHexString.fromText(item.author),
+        Name:'Note',C:[1,0.85,0.2],F:4,Open:false,P:page.ref});
+      page.node.addAnnot(pdf.context.register(annotation));
+    }else if(item.kind==='text'){
       if(!item.text.trim()||item.text.length>200||/[\r\n]/.test(item.text))throw new Error('Text must be one non-empty line of up to 200 characters.');
       try{font.encodeText(item.text);}catch{throw new Error('Use Western European characters supported by Helvetica.');}
       // Fit both font ascent and descenders inside the same visual box used for images.
