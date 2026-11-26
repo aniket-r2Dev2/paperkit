@@ -40,3 +40,5 @@
 .pdf-preview>.option-row button{border:1px solid #c7d9eb;border-radius:7px;background:#fff;color:#225887;font:inherit;font-weight:600;padding:8px 10px;cursor:pointer}.pdf-preview>.option-row button:disabled{opacity:.45;cursor:default}.pdf-preview>.option-row button:hover:not(:disabled){background:#edf5ff}.pdf-preview>p{font-size:12px;color:#45586e}.pdf-preview button:focus-visible{outline:2px solid #0a66c2;outline-offset:3px}.organizer-grid{margin-top:12px}
 
 .editor-item{display:flex;flex-wrap:wrap;gap:12px;border:1px solid #c7d9eb;border-radius:8px;margin:16px 0;padding:16px;min-width:0}.editor-item label{display:flex;flex-direction:column;gap:6px;max-width:100%}.editor-item input{max-width:100%;box-sizing:border-box}.editor-item input[type=number]{width:100px}
+
+.editor-item textarea{width:320px;max-width:100%;box-sizing:border-box;resize:vertical;font:inherit}

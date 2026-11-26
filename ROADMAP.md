@@ -47,7 +47,8 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [x] Add text/image overlays with position/size controls, undo and exported preview
 - [x] Add rectangle/ellipse outlines, highlights and strike-through with color, opacity and line controls
 - [x] Add HTTP/HTTPS and internal-page links with placement controls, undo and export
-- [ ] Edit existing links and editable PDF annotations/comments (remaining #37 scope)
+- [x] Add Unicode sticky-note comments with optional author, positioning, removal and undo
+- [ ] Edit existing links and import/edit existing PDF comments (remaining #37 scope)
 - [ ] Flatten forms/annotations; remove annotations
 - [ ] Alternate/mix and split-by-bookmarks
 - [ ] OCR and deskew with language-pack strategy
