@@ -3,9 +3,10 @@ import {PDFDocument,PDFHexString,degrees} from 'pdf-lib';
 import {readFile} from 'node:fs/promises';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 for(const angle of [0,90,180,270])test(`comments preserve Unicode, existing notes and placement at ${angle} degrees`,async({page})=>{
-  const pdf=await PDFDocument.create();const sheet=pdf.addPage([400,600]);sheet.setCropBox(20,30,300,500);sheet.setRotation(degrees(angle));sheet.drawText('Original selectable text');
+  const pdf=await PDFDocument.create();const sheet=pdf.addPage([400,600]);sheet.setCropBox(20,30,300,500);sheet.setRotation(degrees(angle));sheet.drawText('Original selectable text',{x:50,y:200,size:12});
   sheet.node.addAnnot(pdf.context.register(pdf.context.obj({Type:'Annot',Subtype:'Text',Rect:[30,40,52,62],Contents:PDFHexString.fromText('Existing note')})));
-  await page.goto('/');await page.getByRole('button',{name:/^Add text & images/}).click();await page.locator('input[type=file]').first().setInputFiles({name:'notes.pdf',mimeType:'application/pdf',buffer:Buffer.from(await pdf.save())});
+  const source=await pdf.save();const originalTask=pdfjs.getDocument({data:source.slice(),isEvalSupported:false});const originalDoc=await originalTask.promise;expect((await(await originalDoc.getPage(1)).getTextContent()).items.some(item=>'str' in item&&item.str==='Original selectable text')).toBe(true);await originalTask.destroy();
+  await page.goto('/');await page.getByRole('button',{name:/^Add text & images/}).click();await page.locator('input[type=file]').first().setInputFiles({name:'notes.pdf',mimeType:'application/pdf',buffer:Buffer.from(source)});
   await page.getByRole('button',{name:'Add comment',exact:true}).click();await page.getByLabel('Overlay 1 comment',{exact:true}).fill('First note');await page.getByLabel('Overlay 1 author',{exact:true}).fill('Aniket');
   await page.getByRole('button',{name:'Preview edited PDF',exact:true}).click();const link=page.getByRole('link',{name:'Download edited PDF',exact:true});await expect(link).toBeVisible();const stale=await link.getAttribute('href');
   await page.getByLabel('Overlay 1 comment',{exact:true}).fill('Review this\nनमस्ते 👋');await expect(link).toHaveCount(0);expect(await page.evaluate(async u=>{try{await fetch(u!);return false;}catch{return true;}},stale)).toBe(true);
