@@ -44,7 +44,8 @@ This inventory distinguishes capabilities currently implemented on `main` from p
 - [x] Rectangle/ellipse outlines, highlights and strike-through as permanent page graphics
 - [x] Add web and internal-page links; edit/remove/undo links created in the current session
 - [x] Add editable PDF sticky-note comments; edit/remove/undo notes from the current session
-- [ ] Edit existing PDF links and import/edit existing comments
+- [x] Edit/remove existing HTTP/HTTPS and explicit internal-page links, preserving geometry
+- [ ] Import/edit existing comments; named/other link actions remain unsupported
 - [x] Fill existing AcroForm text, checkbox and radio fields with editable or flattened downloads
 - [x] Add signature by draw/type/upload with position and size controls
 - [ ] Create fillable forms

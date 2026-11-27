@@ -48,7 +48,8 @@ Priorities are provisional and may be reshuffled after validating libraries and 
 - [x] Add rectangle/ellipse outlines, highlights and strike-through with color, opacity and line controls
 - [x] Add HTTP/HTTPS and internal-page links with placement controls, undo and export
 - [x] Add Unicode sticky-note comments with optional author, positioning, removal and undo
-- [ ] Edit existing links and import/edit existing PDF comments (remaining #37 scope)
+- [x] Edit/remove existing HTTP/HTTPS and explicit internal-page link destinations with undo
+- [ ] Import/edit existing PDF comments; named/other link actions remain unsupported
 - [ ] Flatten forms/annotations; remove annotations
 - [ ] Alternate/mix and split-by-bookmarks
 - [ ] OCR and deskew with language-pack strategy
