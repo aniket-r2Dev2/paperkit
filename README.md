@@ -130,7 +130,7 @@ Supports one PDF up to 50 MB and 500 pages, with a 120-second timeout and cancel
 
 Add up to 50 text or PNG/JPEG overlays across a PDF. Set each overlay’s page, left/top position and width/height using keyboard-accessible percentage fields; remove overlays or undo the last 20 changes. Later overlays appear above earlier ones. Text is a single line of up to 200 Western European characters in Helvetica, automatically fitted to its box between 6 and 144 pt. Images retain their proportions within the chosen box, anchored at its lower-left, and are limited to 2 MB and 4 megapixels each.
 
-Preview edited PDF renders the actual exported file; edits revoke the prior download and discard that preview. Processing stays local. Clear all or switching tools releases the editing state and undo history. Supports unencrypted PDFs up to 50 MB and 500 pages. This adds permanent overlays; it does not edit or redact existing content and invalidates digital signatures. Editing existing links and importing existing PDF comments remain pending in #37.
+Preview edited PDF renders the actual exported file; edits revoke the prior download and discard that preview. Processing stays local. Clear all or switching tools releases the editing state and undo history. Supports unencrypted PDFs up to 50 MB and 500 pages. This adds permanent overlays; it does not edit or redact existing content and invalidates digital signatures. Importing existing PDF comments remains pending in #37. Existing link destinations can be edited with Edit PDF links.
 
 ### Shapes and visual markup
 
@@ -142,10 +142,16 @@ Markups are permanent page graphics, not editable PDF comments or automatic text
 
 Use Add web link or Add page link in the text/image editor to place a clickable rectangle over a PDF page. Set its page, percentage position and size, then enter an HTTP/HTTPS URL or a destination page. URLs with credentials, spaces, control characters or more than 2048 encoded characters are rejected. No URL is fetched during processing. Internal links open their destination page in fit-page view.
 
-Each new link includes a thin blue frame in the exported PDF so its area is visible in the canvas preview. Follow links in a PDF viewer after downloading; the PaperKit canvas preview is not interactive. You can change destinations, move, resize, remove and undo links added during the current session. Original link annotations and other annotations are preserved, but loading/editing existing links remains pending. Links share the 50-object cap and download cleanup of other editor objects.
+Each new link includes a thin blue frame in the exported PDF so its area is visible in the canvas preview. Follow links in a PDF viewer after downloading; the PaperKit canvas preview is not interactive. You can change destinations, move, resize, remove and undo links added during the current session. Original link annotations and other annotations are preserved. Use Edit PDF links to change or remove supported existing destinations. Links share the 50-object cap and download cleanup of other editor objects.
 
 ### Sticky-note comments
 
 Use Add comment in the text/image editor to add a real PDF sticky-note annotation. Enter multiline Unicode text (1–2000 characters), an optional author (up to 100 characters), a page and percentage coordinates. Each yellow note icon occupies 22 pt and must fit inside the visible page. Edit, remove and undo notes added during the session; notes share the 50-object and 20-change undo limits.
 
 Comments remain editable in supporting PDF viewers and do not change page text. The canvas preview does not show note icons or popups: open the downloaded PDF in a viewer with comment support to review them. Existing comments are preserved, but importing/editing them in PaperKit is still pending. No author is inferred or stored automatically. Processing and download cleanup stay local.
+
+### Edit existing PDF links
+
+Choose **Edit PDF links** and upload one unencrypted PDF (up to 50 MB / 500 pages). Change an HTTP/HTTPS URL or an explicit internal page destination, or remove a link. Undo retains the last 20 changes. Up to 200 supported links are listed in source page order, with a 10,000-annotation inspection cap. Named destinations, locked links, non-web URLs, chained actions and other unsupported links are left intact and counted; this is not a PDF sanitization tool.
+
+Link rectangles, borders and page artwork remain unchanged. Removing a link removes its clickable annotation, not its underlying text or any frame drawn into page content. Changing an internal destination resets its zoom to fit-page view; untouched destinations retain their original settings. Shared annotation objects are copied before edits to avoid changing other occurrences. No destination is fetched. Saved destinations are verified before download. Open the result in a PDF viewer to test links; editing invalidates the previous download, and clearing files or switching tools discards state. Rewriting invalidates digital signatures.
